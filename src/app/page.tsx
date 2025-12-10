@@ -37,11 +37,11 @@ export default function HomePage() {
   const [lots, setLots] = useState<Lot[]>([]);
   const [loadingLots, setLoadingLots] = useState<boolean>(false);
 
-  // Items
+  // Prendas
   const [items, setItems] = useState<Item[]>([]);
   const [loadingItems, setLoadingItems] = useState<boolean>(false);
 
-  // Formulario de lote
+  // Formulario lote
   const [lotName, setLotName] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
   const [itemsCount, setItemsCount] = useState("");
@@ -49,7 +49,7 @@ export default function HomePage() {
   const [savingLot, setSavingLot] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
-  // Formulario de prenda (item)
+  // Formulario prenda
   const [itemLotId, setItemLotId] = useState<string>("");
   const [itemName, setItemName] = useState("");
   const [itemSize, setItemSize] = useState("");
@@ -63,11 +63,11 @@ export default function HomePage() {
   const [savingItem, setSavingItem] = useState(false);
   const [itemFormError, setItemFormError] = useState<string | null>(null);
 
-  // Filtros de fecha (por fecha de venta)
+  // Filtros por fecha de venta
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
 
-  // Helpers para métricas de cada prenda
+  // Helpers
   const getItemProfit = (item: Item): number => {
     const purchase = item.purchase_cost ?? 0;
     const sale = item.sale_price ?? 0;
@@ -86,9 +86,8 @@ export default function HomePage() {
   };
 
   const isInDateFilter = (saleDate: string | null): boolean => {
-    if (!filterFrom && !filterTo) return true; // sin filtros, todo entra
+    if (!filterFrom && !filterTo) return true;
     if (!saleDate) return false;
-
     const sale = new Date(saleDate);
     if (filterFrom) {
       const from = new Date(filterFrom);
@@ -96,14 +95,13 @@ export default function HomePage() {
     }
     if (filterTo) {
       const to = new Date(filterTo);
-      // incluir el día completo "hasta"
       to.setHours(23, 59, 59, 999);
       if (sale > to) return false;
     }
     return true;
   };
 
-  // --- Funciones de carga de datos ---
+  // --- Carga de datos ---
 
   const fetchLots = async () => {
     if (!session) return;
@@ -137,7 +135,7 @@ export default function HomePage() {
     setLoadingItems(false);
   };
 
-  // --- Auth: sesión y cambios de sesión ---
+  // --- Auth ---
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -155,7 +153,6 @@ export default function HomePage() {
     };
   }, []);
 
-  // Cuando hay sesión, cargamos lotes e items
   useEffect(() => {
     if (!session) return;
     fetchLots();
@@ -186,11 +183,11 @@ export default function HomePage() {
     const totalCostNumber = parseFloat(totalCost.replace(",", "."));
 
     if (isNaN(itemsCountNumber) || itemsCountNumber <= 0) {
-      setFormError("El número de prendas debe ser un número mayor que 0.");
+      setFormError("El número de prendas debe ser mayor que 0.");
       return;
     }
     if (isNaN(totalCostNumber) || totalCostNumber <= 0) {
-      setFormError("El coste total debe ser un número mayor que 0.");
+      setFormError("El coste total debe ser mayor que 0.");
       return;
     }
 
@@ -216,20 +213,18 @@ export default function HomePage() {
         return;
       }
 
-      // Limpiar formulario
       setLotName("");
       setPurchaseDate("");
       setItemsCount("");
       setTotalCost("");
 
-      // Recargar lotes
       await fetchLots();
     } finally {
       setSavingLot(false);
     }
   };
 
-  // --- Crear prenda (item) ---
+  // --- Crear prenda ---
 
   const handleCreateItem = async (e: FormEvent) => {
     e.preventDefault();
@@ -240,7 +235,6 @@ export default function HomePage() {
       return;
     }
 
-    // Coste de compra: o lo indica el usuario o se usa el coste unitario del lote
     let purchaseCostNumber: number | null = null;
 
     if (itemPurchaseCost.trim()) {
@@ -320,7 +314,6 @@ export default function HomePage() {
         return;
       }
 
-      // Limpiar formulario
       setItemLotId("");
       setItemName("");
       setItemSize("");
@@ -332,14 +325,13 @@ export default function HomePage() {
       setItemPlatformFee("");
       setItemShippingCost("");
 
-      // Recargar items
       await fetchItems();
     } finally {
       setSavingItem(false);
     }
   };
 
-  // --- BORRAR LOTE (y sus prendas asociadas de prueba) ---
+  // --- Borrar lote + prendas del lote ---
 
   const handleDeleteLot = async (lotId: string) => {
     const confirmDelete = window.confirm(
@@ -347,36 +339,31 @@ export default function HomePage() {
     );
     if (!confirmDelete) return;
 
-    // Primero borramos las prendas del lote (por seguridad)
     const { error: itemsError } = await supabase
       .from("items")
       .delete()
       .eq("lot_id", lotId);
-
     if (itemsError) {
       console.error("Error borrando prendas del lote:", itemsError);
       alert("Ha ocurrido un error al borrar las prendas del lote.");
       return;
     }
 
-    // Luego borramos el lote
     const { error: lotError } = await supabase
       .from("lots")
       .delete()
       .eq("id", lotId);
-
     if (lotError) {
       console.error("Error borrando lote:", lotError);
       alert("Ha ocurrido un error al borrar el lote.");
       return;
     }
 
-    // Recargar datos en memoria
     await fetchLots();
     await fetchItems();
   };
 
-  // --- BORRAR PRENDA INDIVIDUAL ---
+  // --- Borrar prenda individual ---
 
   const handleDeleteItem = async (itemId: string) => {
     const confirmDelete = window.confirm(
@@ -385,7 +372,6 @@ export default function HomePage() {
     if (!confirmDelete) return;
 
     const { error } = await supabase.from("items").delete().eq("id", itemId);
-
     if (error) {
       console.error("Error borrando prenda:", error);
       alert("Ha ocurrido un error al borrar la prenda.");
@@ -395,94 +381,135 @@ export default function HomePage() {
     await fetchItems();
   };
 
-  // --- MÉTRICAS AGREGADAS (con filtros) ---
+  // --- MÉTRICAS GLOBALES (con filtros en las ventas) ---
 
-  // Solo prendas vendidas
   const soldItemsAll = items.filter((item) => item.status === "sold");
-
-  // Aplicar filtro por fecha de venta
   const soldItems = soldItemsAll.filter((item) =>
     isInDateFilter(item.sale_date)
   );
 
-  const totalLotsCost = lots.reduce(
+  const lotsCostTotal = lots.reduce(
     (sum, lot) => sum + (lot.total_cost ?? 0),
     0
   );
 
-  const totalSoldCost = soldItems.reduce(
+  const singleItems = items.filter((item) => !item.lot_id);
+  const singlesCostTotal = singleItems.reduce(
     (sum, item) => sum + (item.purchase_cost ?? 0),
     0
   );
 
-  const totalSoldRevenue = soldItems.reduce(
+  const totalRevenueSold = soldItems.reduce(
     (sum, item) => sum + (item.sale_price ?? 0),
     0
   );
-
-  const totalSoldPlatformFees = soldItems.reduce(
+  const totalFeesSold = soldItems.reduce(
     (sum, item) => sum + (item.platform_fee ?? 0),
     0
   );
-
-  const totalSoldShipping = soldItems.reduce(
+  const totalShippingSold = soldItems.reduce(
     (sum, item) => sum + (item.shipping_cost ?? 0),
     0
   );
 
-  const totalProfit = soldItems.reduce(
+  // Beneficio total = ingresos - (coste lotes + coste prendas sueltas + comisiones + envíos)
+  const totalExpensesAll =
+    lotsCostTotal + singlesCostTotal + totalFeesSold + totalShippingSold;
+  const globalProfit = totalRevenueSold - totalExpensesAll;
+  const globalProfitClass =
+    globalProfit >= 0 ? "text-emerald-400" : "text-red-400";
+
+  // Beneficio sobre lotes = ingresos prendas de lote - (coste lotes + comisiones+envíos de esas prendas)
+  const soldItemsFromLots = soldItems.filter((item) => item.lot_id !== null);
+  const lotRevenueSold = soldItemsFromLots.reduce(
+    (sum, item) => sum + (item.sale_price ?? 0),
+    0
+  );
+  const lotFeesSold = soldItemsFromLots.reduce(
+    (sum, item) => sum + (item.platform_fee ?? 0),
+    0
+  );
+  const lotShippingSold = soldItemsFromLots.reduce(
+    (sum, item) => sum + (item.shipping_cost ?? 0),
+    0
+  );
+  const lotProfit =
+    lotRevenueSold - lotsCostTotal - lotFeesSold - lotShippingSold;
+  const lotProfitClass = lotProfit >= 0 ? "text-emerald-400" : "text-red-400";
+
+  // Margen sobre prendas vendidas (ROI usando coste por prenda)
+  const costSoldItems = soldItems.reduce(
+    (sum, item) => sum + (item.purchase_cost ?? 0),
+    0
+  );
+  const profitFromSoldItems = soldItems.reduce(
     (sum, item) => sum + getItemProfit(item),
     0
   );
+  const marginSoldItems =
+    costSoldItems > 0 ? profitFromSoldItems / costSoldItems : null;
 
+  // Media de días para vender
   const soldDays = soldItems
     .map((item) => getItemDaysToSell(item))
     .filter((d): d is number => d != null);
-
   const avgDaysToSell =
     soldDays.length > 0
       ? soldDays.reduce((sum, d) => sum + d, 0) / soldDays.length
       : null;
 
-  const roiVsSoldCost =
-    totalSoldCost > 0 ? totalProfit / totalSoldCost : null;
+  // --- Resumen por lote ---
 
-  const roiVsLotsCost =
-    totalLotsCost > 0 ? totalProfit / totalLotsCost : null;
-
-  // Resumen por lote usando los soldItems filtrados
   const lotsWithMetrics = lots.map((lot) => {
-    const lotItems = items.filter((item) => item.lot_id === lot.id);
+    const lotItemsAll = items.filter((item) => item.lot_id === lot.id);
     const lotSoldItems = soldItems.filter((item) => item.lot_id === lot.id);
 
-    const lotSoldRevenue = lotSoldItems.reduce(
+    const lotRevenue = lotSoldItems.reduce(
       (sum, item) => sum + (item.sale_price ?? 0),
+      0
+    );
+    const lotFees = lotSoldItems.reduce(
+      (sum, item) => sum + (item.platform_fee ?? 0),
+      0
+    );
+    const lotShipping = lotSoldItems.reduce(
+      (sum, item) => sum + (item.shipping_cost ?? 0),
       0
     );
     const lotSoldCost = lotSoldItems.reduce(
       (sum, item) => sum + (item.purchase_cost ?? 0),
       0
     );
-    const lotProfit = lotSoldItems.reduce(
-      (sum, item) => sum + getItemProfit(item),
-      0
-    );
-    const lotRoi = lotSoldCost > 0 ? lotProfit / lotSoldCost : null;
+
+    const lotTotalCost = lot.total_cost ?? 0;
+
+    // Beneficio vs lote completo (esto es lo que tú quieres ver por lote)
+    const profitVsLot =
+      lotRevenue - lotTotalCost - lotFees - lotShipping;
+
+    // Beneficio vs coste de prendas vendidas (para ROI de margen)
+    const profitVsSoldCost =
+      lotRevenue - lotSoldCost - lotFees - lotShipping;
+
+    const roiVsLotCost =
+      lotTotalCost > 0 ? profitVsLot / lotTotalCost : null;
+    const roiVsSoldCost =
+      lotSoldCost > 0 ? profitVsSoldCost / lotSoldCost : null;
 
     return {
       lot,
-      totalItems: lotItems.length,
+      totalItems: lotItemsAll.length,
       soldItems: lotSoldItems.length,
-      revenue: lotSoldRevenue,
-      cost: lotSoldCost,
-      profit: lotProfit,
-      roi: lotRoi,
+      revenue: lotRevenue,
+      lotTotalCost,
+      profitVsLot,
+      roiVsLotCost,
+      roiVsSoldCost,
     };
   });
 
   // --- Render ---
 
-  // Si no hay sesión, mostramos login
   if (!session) {
     return (
       <main className="min-h-screen flex items-center justify-center bg-slate-950">
@@ -503,7 +530,6 @@ export default function HomePage() {
     );
   }
 
-  // Si hay sesión, mostramos todo
   return (
     <main className="min-h-screen bg-slate-950 text-white">
       <header className="border-b border-slate-800 px-6 py-4 flex items-center justify-between">
@@ -521,13 +547,13 @@ export default function HomePage() {
       </header>
 
       <section className="px-6 py-6 max-w-6xl mx-auto space-y-10">
-        {/* FILTROS DE FECHA */}
+        {/* FILTROS */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-sm font-semibold mb-1">Filtros de periodo</p>
             <p className="text-[11px] text-slate-400">
-              Aplican a las métricas y al resumen por lote (según fecha de
-              venta). Si dejas los campos vacíos se usa todo el histórico.
+              Aplican a las ventas (fecha de venta) y al resumen por lote. Si
+              dejas los campos vacíos se usa todo el histórico de ventas.
             </p>
           </div>
           <div className="flex gap-3">
@@ -556,50 +582,56 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* MÉTRICAS GLOBALES */}
+        {/* KPIs */}
         <div className="grid gap-4 md:grid-cols-4">
+          {/* Beneficio total */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
             <p className="text-xs text-slate-400">Beneficio total</p>
-            <p className="text-xl font-semibold">
-              {totalProfit.toFixed(2)}€
+            <p className={`text-xl font-semibold ${globalProfitClass}`}>
+              {globalProfit.toFixed(2)}€
             </p>
             <p className="text-[11px] text-slate-500 mt-1">
-              Ingresos menos gastos de prendas vendidas en el periodo
-              seleccionado.
+              Ingresos ventas (todas las prendas vendidas):{" "}
+              {totalRevenueSold.toFixed(2)}€
             </p>
             <p className="text-[11px] text-slate-500 mt-1">
-              ROI sobre coste total lotes:{" "}
-              {roiVsLotsCost != null
-                ? `${(roiVsLotsCost * 100).toFixed(1)}%`
-                : "-"}
+              Gastos totales (lotes + prendas sueltas + comisiones + envíos):{" "}
+              {totalExpensesAll.toFixed(2)}€
             </p>
           </div>
 
+          {/* Beneficio sobre lotes */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-            <p className="text-xs text-slate-400">Ingresos por ventas</p>
-            <p className="text-xl font-semibold">
-              {totalSoldRevenue.toFixed(2)}€
+            <p className="text-xs text-slate-400">Beneficio sobre lotes</p>
+            <p className={`text-xl font-semibold ${lotProfitClass}`}>
+              {lotProfit.toFixed(2)}€
             </p>
             <p className="text-[11px] text-slate-500 mt-1">
-              Comisiones + envíos:{" "}
-              {(totalSoldPlatformFees + totalSoldShipping).toFixed(2)}€
+              Ingresos prendas de lote vendidas: {lotRevenueSold.toFixed(2)}€
+            </p>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Coste lotes: {lotsCostTotal.toFixed(2)}€ · Comisiones+envíos
+              lotes: {(lotFeesSold + lotShippingSold).toFixed(2)}€
             </p>
           </div>
 
+          {/* Margen sobre prendas vendidas */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
             <p className="text-xs text-slate-400">
-              ROI coste prendas vendidas
+              Margen sobre prendas vendidas
             </p>
             <p className="text-xl font-semibold">
-              {roiVsSoldCost != null
-                ? `${(roiVsSoldCost * 100).toFixed(1)}%`
+              {marginSoldItems != null
+                ? `${(marginSoldItems * 100).toFixed(1)}%`
                 : "-"}
             </p>
             <p className="text-[11px] text-slate-500 mt-1">
-              Beneficio / coste de prendas vendidas en el periodo.
+              ROI calculado sobre el coste de las prendas vendidas
+              (incluyendo lotes y prendas sueltas).
             </p>
           </div>
 
+          {/* Media días para vender */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
             <p className="text-xs text-slate-400">
               Media de días para vender
@@ -613,7 +645,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* FORMULARIO LOTE */}
+        {/* FORM LOTE */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
           <h2 className="text-lg font-semibold mb-3">Añadir nuevo lote</h2>
           <form
@@ -632,7 +664,6 @@ export default function HomePage() {
                 placeholder="Ej: Lote jerseys invierno"
               />
             </div>
-
             <div>
               <label className="block text-xs text-slate-300 mb-1">
                 Fecha compra
@@ -644,7 +675,6 @@ export default function HomePage() {
                 className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-white"
               />
             </div>
-
             <div>
               <label className="block text-xs text-slate-300 mb-1">
                 Nº prendas
@@ -658,7 +688,6 @@ export default function HomePage() {
                 placeholder="Ej: 10"
               />
             </div>
-
             <div>
               <label className="block text-xs text-slate-300 mb-1">
                 Coste total (€)
@@ -671,7 +700,6 @@ export default function HomePage() {
                 placeholder="Ej: 50"
               />
             </div>
-
             <div className="md:col-span-4 flex items-center gap-3 mt-2">
               <button
                 type="submit"
@@ -687,16 +715,13 @@ export default function HomePage() {
           </form>
         </div>
 
-        {/* LISTADO DE LOTES */}
+        {/* LISTA LOTES */}
         <div>
           <h2 className="text-lg font-semibold mb-3">Lotes</h2>
           {loadingLots ? (
             <p>Cargando lotes...</p>
           ) : lots.length === 0 ? (
-            <p>
-              Todavía no tienes lotes. Añade el primero con el formulario
-              superior.
-            </p>
+            <p>No tienes lotes todavía.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm border border-slate-800">
@@ -753,8 +778,7 @@ export default function HomePage() {
           </h2>
           {lotsWithMetrics.every((m) => m.soldItems === 0) ? (
             <p className="text-sm text-slate-400">
-              No hay prendas vendidas en el periodo seleccionado. Ajusta
-              las fechas o registra ventas.
+              No hay prendas vendidas en el periodo seleccionado.
             </p>
           ) : (
             <div className="overflow-x-auto">
@@ -762,9 +786,8 @@ export default function HomePage() {
                 <thead className="bg-slate-900">
                   <tr>
                     <th className="px-3 py-2 text-left">Lote</th>
-                    <th className="px-3 py-2 text-right">
-                      Prendas lote
-                    </th>
+                    <th className="px-3 py-2 text-right">Coste lote</th>
+                    <th className="px-3 py-2 text-right">Prendas lote</th>
                     <th className="px-3 py-2 text-right">
                       Vendidas periodo
                     </th>
@@ -772,10 +795,13 @@ export default function HomePage() {
                       Ingresos periodo
                     </th>
                     <th className="px-3 py-2 text-right">
-                      Beneficio periodo
+                      Beneficio (vs lote)
                     </th>
                     <th className="px-3 py-2 text-right">
-                      ROI periodo (prendas vendidas)
+                      ROI coste lote
+                    </th>
+                    <th className="px-3 py-2 text-right">
+                      ROI prendas vendidas
                     </th>
                   </tr>
                 </thead>
@@ -787,6 +813,11 @@ export default function HomePage() {
                     >
                       <td className="px-3 py-2">{entry.lot.name}</td>
                       <td className="px-3 py-2 text-right">
+                        {entry.lotTotalCost
+                          ? `${entry.lotTotalCost.toFixed(2)}€`
+                          : "-"}
+                      </td>
+                      <td className="px-3 py-2 text-right">
                         {entry.totalItems}
                       </td>
                       <td className="px-3 py-2 text-right">
@@ -795,12 +826,22 @@ export default function HomePage() {
                       <td className="px-3 py-2 text-right">
                         {entry.revenue.toFixed(2)}€
                       </td>
-                      <td className="px-3 py-2 text-right">
-                        {entry.profit.toFixed(2)}€
+                      <td
+                        className={
+                          "px-3 py-2 text-right " +
+                          (entry.profitVsLot < 0 ? "text-red-400" : "")
+                        }
+                      >
+                        {entry.profitVsLot.toFixed(2)}€
                       </td>
                       <td className="px-3 py-2 text-right">
-                        {entry.roi != null
-                          ? `${(entry.roi * 100).toFixed(1)}%`
+                        {entry.roiVsLotCost != null
+                          ? `${(entry.roiVsLotCost * 100).toFixed(1)}%`
+                          : "-"}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {entry.roiVsSoldCost != null
+                          ? `${(entry.roiVsSoldCost * 100).toFixed(1)}%`
                           : "-"}
                       </td>
                     </tr>
@@ -811,7 +852,7 @@ export default function HomePage() {
           )}
         </div>
 
-        {/* FORMULARIO PRENDA */}
+        {/* FORM PRENDA */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
           <h2 className="text-lg font-semibold mb-3">Añadir nueva prenda</h2>
           <form
@@ -830,7 +871,6 @@ export default function HomePage() {
                 placeholder="Ej: Jersey vintage azul"
               />
             </div>
-
             <div>
               <label className="block text-xs text-slate-300 mb-1">
                 Lote (opcional)
@@ -848,7 +888,6 @@ export default function HomePage() {
                 ))}
               </select>
             </div>
-
             <div>
               <label className="block text-xs text-slate-300 mb-1">
                 Talla
@@ -861,7 +900,6 @@ export default function HomePage() {
                 placeholder="Ej: M / 38 / 40"
               />
             </div>
-
             <div>
               <label className="block text-xs text-slate-300 mb-1">
                 Fecha publicación
@@ -873,7 +911,6 @@ export default function HomePage() {
                 className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-white"
               />
             </div>
-
             <div>
               <label className="block text-xs text-slate-300 mb-1">
                 Fecha venta (si vendida)
@@ -885,7 +922,6 @@ export default function HomePage() {
                 className="w-full rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-white"
               />
             </div>
-
             <div>
               <label className="block text-xs text-slate-300 mb-1">
                 Estado
@@ -903,7 +939,6 @@ export default function HomePage() {
                 <option value="returned">Devuelta</option>
               </select>
             </div>
-
             <div>
               <label className="block text-xs text-slate-300 mb-1">
                 Coste compra (€)
@@ -916,7 +951,6 @@ export default function HomePage() {
                 placeholder="Si vacío + lote ⇒ usa coste unit."
               />
             </div>
-
             <div>
               <label className="block text-xs text-slate-300 mb-1">
                 Precio venta (€)
@@ -929,7 +963,6 @@ export default function HomePage() {
                 placeholder="Ej: 25"
               />
             </div>
-
             <div>
               <label className="block text-xs text-slate-300 mb-1">
                 Comisión plataforma (€)
@@ -942,7 +975,6 @@ export default function HomePage() {
                 placeholder="Ej: 2"
               />
             </div>
-
             <div>
               <label className="block text-xs text-slate-300 mb-1">
                 Coste envío asumido (€)
@@ -955,7 +987,6 @@ export default function HomePage() {
                 placeholder="Ej: 4"
               />
             </div>
-
             <div className="md:col-span-4 flex items-center gap-3 mt-2">
               <button
                 type="submit"
@@ -971,16 +1002,13 @@ export default function HomePage() {
           </form>
         </div>
 
-        {/* LISTADO DE PRENDAS */}
+        {/* LISTA PRENDAS */}
         <div>
           <h2 className="text-lg font-semibold mb-3">Prendas</h2>
           {loadingItems ? (
             <p>Cargando prendas...</p>
           ) : items.length === 0 ? (
-            <p>
-              Todavía no has registrado prendas. Añade la primera con el
-              formulario anterior.
-            </p>
+            <p>No has registrado prendas todavía.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm border border-slate-800">
