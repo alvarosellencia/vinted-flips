@@ -48,6 +48,7 @@ export default function HomePage() {
   const [totalCost, setTotalCost] = useState("");
   const [savingLot, setSavingLot] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  const [editingLot, setEditingLot] = useState<Lot | null>(null);
 
   // Formulario prenda
   const [itemLotId, setItemLotId] = useState<string>("");
@@ -62,10 +63,16 @@ export default function HomePage() {
   const [itemShippingCost, setItemShippingCost] = useState("");
   const [savingItem, setSavingItem] = useState(false);
   const [itemFormError, setItemFormError] = useState<string | null>(null);
+  const [editingItem, setEditingItem] = useState<Item | null>(null);
 
-  // Filtros por fecha de venta
+  // Filtros por fecha de venta (para KPIs y resumen por lote)
   const [filterFrom, setFilterFrom] = useState("");
   const [filterTo, setFilterTo] = useState("");
+
+  // Filtros de la tabla de prendas
+  const [filterLotIdTable, setFilterLotIdTable] = useState<string>("all");
+  const [filterStatusTable, setFilterStatusTable] =
+    useState<"all" | ItemStatus>("all");
 
   // Helpers
   const getItemProfit = (item: Item): number => {
@@ -160,9 +167,18 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
-  // --- Crear lote ---
+  // --- Crear / editar lote ---
 
-  const handleCreateLot = async (e: FormEvent) => {
+  const resetLotForm = () => {
+    setLotName("");
+    setPurchaseDate("");
+    setItemsCount("");
+    setTotalCost("");
+    setEditingLot(null);
+    setFormError(null);
+  };
+
+  const handleSubmitLot = async (e: FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
@@ -186,47 +202,81 @@ export default function HomePage() {
       setFormError("El número de prendas debe ser mayor que 0.");
       return;
     }
-    if (isNaN(totalCostNumber) || totalCostNumber <= 0) {
-      setFormError("El coste total debe ser mayor que 0.");
+    if (isNaN(totalCostNumber) || totalCostNumber < 0) {
+      setFormError("El coste total debe ser un número válido (>= 0).");
       return;
     }
 
-    const unitCost = totalCostNumber / itemsCountNumber;
+    const unitCost =
+      itemsCountNumber > 0 && totalCostNumber > 0
+        ? totalCostNumber / itemsCountNumber
+        : 0;
 
     try {
       setSavingLot(true);
 
-      const { error } = await supabase.from("lots").insert([
-        {
-          user_id: session.user.id,
-          name: lotName.trim(),
-          purchase_date: purchaseDate || null,
-          items_count: itemsCountNumber,
-          total_cost: totalCostNumber,
-          unit_cost: unitCost,
-        },
-      ]);
+      if (editingLot) {
+        const { error } = await supabase
+          .from("lots")
+          .update({
+            name: lotName.trim(),
+            purchase_date: purchaseDate || null,
+            items_count: itemsCountNumber,
+            total_cost: totalCostNumber,
+            unit_cost: unitCost,
+          })
+          .eq("id", editingLot.id)
+          .eq("user_id", session.user.id);
 
-      if (error) {
-        console.error("Error creando lote:", error);
-        setFormError("Ha ocurrido un error al guardar el lote.");
-        return;
+        if (error) {
+          console.error("Error actualizando lote:", error);
+          setFormError("Ha ocurrido un error al actualizar el lote.");
+          return;
+        }
+      } else {
+        const { error } = await supabase.from("lots").insert([
+          {
+            user_id: session.user.id,
+            name: lotName.trim(),
+            purchase_date: purchaseDate || null,
+            items_count: itemsCountNumber,
+            total_cost: totalCostNumber,
+            unit_cost: unitCost,
+          },
+        ]);
+
+        if (error) {
+          console.error("Error creando lote:", error);
+          setFormError("Ha ocurrido un error al guardar el lote.");
+          return;
+        }
       }
 
-      setLotName("");
-      setPurchaseDate("");
-      setItemsCount("");
-      setTotalCost("");
-
+      resetLotForm();
       await fetchLots();
     } finally {
       setSavingLot(false);
     }
   };
 
-  // --- Crear prenda ---
+  // --- Crear / editar prenda ---
 
-  const handleCreateItem = async (e: FormEvent) => {
+  const resetItemForm = () => {
+    setItemLotId("");
+    setItemName("");
+    setItemSize("");
+    setItemListingDate("");
+    setItemSaleDate("");
+    setItemStatus("for_sale");
+    setItemPurchaseCost("");
+    setItemSalePrice("");
+    setItemPlatformFee("");
+    setItemShippingCost("");
+    setEditingItem(null);
+    setItemFormError(null);
+  };
+
+  const handleSubmitItem = async (e: FormEvent) => {
     e.preventDefault();
     setItemFormError(null);
 
@@ -292,39 +342,54 @@ export default function HomePage() {
     try {
       setSavingItem(true);
 
-      const { error } = await supabase.from("items").insert([
-        {
-          user_id: session.user.id,
-          lot_id: itemLotId || null,
-          name: itemName.trim(),
-          size: itemSize || null,
-          listing_date: itemListingDate || null,
-          sale_date: itemSaleDate || null,
-          status: itemStatus,
-          purchase_cost: purchaseCostNumber,
-          sale_price: salePriceNumber,
-          platform_fee: platformFeeNumber,
-          shipping_cost: shippingCostNumber,
-        },
-      ]);
+      if (editingItem) {
+        const { error } = await supabase
+          .from("items")
+          .update({
+            lot_id: itemLotId || null,
+            name: itemName.trim(),
+            size: itemSize || null,
+            listing_date: itemListingDate || null,
+            sale_date: itemSaleDate || null,
+            status: itemStatus,
+            purchase_cost: purchaseCostNumber,
+            sale_price: salePriceNumber,
+            platform_fee: platformFeeNumber,
+            shipping_cost: shippingCostNumber,
+          })
+          .eq("id", editingItem.id)
+          .eq("user_id", session.user.id);
 
-      if (error) {
-        console.error("Error creando prenda:", error);
-        setItemFormError("Ha ocurrido un error al guardar la prenda.");
-        return;
+        if (error) {
+          console.error("Error actualizando prenda:", error);
+          setItemFormError("Ha ocurrido un error al actualizar la prenda.");
+          return;
+        }
+      } else {
+        const { error } = await supabase.from("items").insert([
+          {
+            user_id: session.user.id,
+            lot_id: itemLotId || null,
+            name: itemName.trim(),
+            size: itemSize || null,
+            listing_date: itemListingDate || null,
+            sale_date: itemSaleDate || null,
+            status: itemStatus,
+            purchase_cost: purchaseCostNumber,
+            sale_price: salePriceNumber,
+            platform_fee: platformFeeNumber,
+            shipping_cost: shippingCostNumber,
+          },
+        ]);
+
+        if (error) {
+          console.error("Error creando prenda:", error);
+          setItemFormError("Ha ocurrido un error al guardar la prenda.");
+          return;
+        }
       }
 
-      setItemLotId("");
-      setItemName("");
-      setItemSize("");
-      setItemListingDate("");
-      setItemSaleDate("");
-      setItemStatus("for_sale");
-      setItemPurchaseCost("");
-      setItemSalePrice("");
-      setItemPlatformFee("");
-      setItemShippingCost("");
-
+      resetItemForm();
       await fetchItems();
     } finally {
       setSavingItem(false);
@@ -359,6 +424,10 @@ export default function HomePage() {
       return;
     }
 
+    if (editingLot && editingLot.id === lotId) {
+      resetLotForm();
+    }
+
     await fetchLots();
     await fetchItems();
   };
@@ -378,10 +447,14 @@ export default function HomePage() {
       return;
     }
 
+    if (editingItem && editingItem.id === itemId) {
+      resetItemForm();
+    }
+
     await fetchItems();
   };
 
-  // --- MÉTRICAS GLOBALES (con filtros en las ventas) ---
+  // --- MÉTRICAS GLOBALES ---
 
   const soldItemsAll = items.filter((item) => item.status === "sold");
   const soldItems = soldItemsAll.filter((item) =>
@@ -419,7 +492,7 @@ export default function HomePage() {
   const globalProfitClass =
     globalProfit >= 0 ? "text-emerald-400" : "text-red-400";
 
-  // Beneficio sobre lotes = ingresos prendas de lote - (coste lotes + comisiones+envíos de esas prendas)
+  // Beneficio sobre lotes
   const soldItemsFromLots = soldItems.filter((item) => item.lot_id !== null);
   const lotRevenueSold = soldItemsFromLots.reduce(
     (sum, item) => sum + (item.sale_price ?? 0),
@@ -458,7 +531,7 @@ export default function HomePage() {
       ? soldDays.reduce((sum, d) => sum + d, 0) / soldDays.length
       : null;
 
-  // --- Resumen por lote ---
+  // --- Resumen por lote (periodo filtrado) ---
 
   const lotsWithMetrics = lots.map((lot) => {
     const lotItemsAll = items.filter((item) => item.lot_id === lot.id);
@@ -483,11 +556,8 @@ export default function HomePage() {
 
     const lotTotalCost = lot.total_cost ?? 0;
 
-    // Beneficio vs lote completo (esto es lo que tú quieres ver por lote)
     const profitVsLot =
       lotRevenue - lotTotalCost - lotFees - lotShipping;
-
-    // Beneficio vs coste de prendas vendidas (para ROI de margen)
     const profitVsSoldCost =
       lotRevenue - lotSoldCost - lotFees - lotShipping;
 
@@ -506,6 +576,24 @@ export default function HomePage() {
       roiVsLotCost,
       roiVsSoldCost,
     };
+  });
+
+  // --- Filtros tabla de prendas (por lote y estado) ---
+
+  const itemsForTable = items.filter((item) => {
+    // Filtro por lote
+    if (filterLotIdTable === "no_lot") {
+      if (item.lot_id) return false; // solo prendas sin lote
+    } else if (filterLotIdTable !== "all") {
+      if (item.lot_id !== filterLotIdTable) return false; // solo prendas del lote seleccionado
+    }
+
+    // Filtro por estado
+    if (filterStatusTable !== "all") {
+      if (item.status !== filterStatusTable) return false;
+    }
+
+    return true;
   });
 
   // --- Render ---
@@ -547,13 +635,14 @@ export default function HomePage() {
       </header>
 
       <section className="px-6 py-6 max-w-6xl mx-auto space-y-10">
-        {/* FILTROS */}
+        {/* FILTROS TIEMPO (KPIs + RESUMEN LOTE) */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="text-sm font-semibold mb-1">Filtros de periodo</p>
             <p className="text-[11px] text-slate-400">
-              Aplican a las ventas (fecha de venta) y al resumen por lote. Si
-              dejas los campos vacíos se usa todo el histórico de ventas.
+              Aplican a las métricas y al resumen por lote (según fecha de
+              venta). Si dejas los campos vacíos se usa todo el histórico de
+              ventas.
             </p>
           </div>
           <div className="flex gap-3">
@@ -584,14 +673,13 @@ export default function HomePage() {
 
         {/* KPIs */}
         <div className="grid gap-4 md:grid-cols-4">
-          {/* Beneficio total */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
             <p className="text-xs text-slate-400">Beneficio total</p>
             <p className={`text-xl font-semibold ${globalProfitClass}`}>
               {globalProfit.toFixed(2)}€
             </p>
             <p className="text-[11px] text-slate-500 mt-1">
-              Ingresos ventas (todas las prendas vendidas):{" "}
+              Ingresos ventas (todas las prendas vendidas en el periodo):{" "}
               {totalRevenueSold.toFixed(2)}€
             </p>
             <p className="text-[11px] text-slate-500 mt-1">
@@ -600,22 +688,21 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* Beneficio sobre lotes */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
             <p className="text-xs text-slate-400">Beneficio sobre lotes</p>
             <p className={`text-xl font-semibold ${lotProfitClass}`}>
               {lotProfit.toFixed(2)}€
             </p>
             <p className="text-[11px] text-slate-500 mt-1">
-              Ingresos prendas de lote vendidas: {lotRevenueSold.toFixed(2)}€
+              Ingresos prendas de lote vendidas (periodo):{" "}
+              {lotRevenueSold.toFixed(2)}€
             </p>
             <p className="text-[11px] text-slate-500 mt-1">
               Coste lotes: {lotsCostTotal.toFixed(2)}€ · Comisiones+envíos
-              lotes: {(lotFeesSold + lotShippingSold).toFixed(2)}€
+              lotes (periodo): {(lotFeesSold + lotShippingSold).toFixed(2)}€
             </p>
           </div>
 
-          {/* Margen sobre prendas vendidas */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
             <p className="text-xs text-slate-400">
               Margen sobre prendas vendidas
@@ -626,12 +713,11 @@ export default function HomePage() {
                 : "-"}
             </p>
             <p className="text-[11px] text-slate-500 mt-1">
-              ROI calculado sobre el coste de las prendas vendidas
-              (incluyendo lotes y prendas sueltas).
+              ROI calculado sobre el coste de las prendas vendidas en el
+              periodo.
             </p>
           </div>
 
-          {/* Media días para vender */}
           <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
             <p className="text-xs text-slate-400">
               Media de días para vender
@@ -647,10 +733,23 @@ export default function HomePage() {
 
         {/* FORM LOTE */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-          <h2 className="text-lg font-semibold mb-3">Añadir nuevo lote</h2>
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h2 className="text-lg font-semibold">
+              {editingLot ? "Editar lote" : "Añadir nuevo lote"}
+            </h2>
+            {editingLot && (
+              <button
+                type="button"
+                onClick={resetLotForm}
+                className="text-xs text-slate-300 underline"
+              >
+                Cancelar edición
+              </button>
+            )}
+          </div>
           <form
             className="grid gap-3 md:grid-cols-4 md:items-end"
-            onSubmit={handleCreateLot}
+            onSubmit={handleSubmitLot}
           >
             <div className="md:col-span-2">
               <label className="block text-xs text-slate-300 mb-1">
@@ -706,7 +805,11 @@ export default function HomePage() {
                 disabled={savingLot}
                 className="inline-flex items-center rounded-md bg-emerald-500 px-3 py-1.5 text-sm font-medium text-black hover:bg-emerald-400 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {savingLot ? "Guardando..." : "Guardar lote"}
+                {savingLot
+                  ? "Guardando..."
+                  : editingLot
+                  ? "Guardar cambios"
+                  : "Guardar lote"}
               </button>
               {formError && (
                 <p className="text-xs text-red-400">{formError}</p>
@@ -756,12 +859,58 @@ export default function HomePage() {
                           : "-"}
                       </td>
                       <td className="px-3 py-2 text-right">
-                        <button
-                          onClick={() => handleDeleteLot(lot.id)}
-                          className="text-xs text-red-300 underline"
-                        >
-                          Eliminar
-                        </button>
+                        <div className="flex justify-end gap-2">
+                          {/* Editar lote */}
+                          <button
+                            type="button"
+                            aria-label="Editar lote"
+                            onClick={() => {
+                              setEditingLot(lot);
+                              setLotName(lot.name);
+                              setPurchaseDate(lot.purchase_date ?? "");
+                              setItemsCount(
+                                lot.items_count != null
+                                  ? String(lot.items_count)
+                                  : ""
+                              );
+                              setTotalCost(
+                                lot.total_cost != null
+                                  ? String(lot.total_cost)
+                                  : ""
+                              );
+                            }}
+                            className="inline-flex items-center justify-center w-7 h-7 rounded border border-slate-700 hover:bg-slate-800 text-slate-200"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                              className="w-4 h-4"
+                            >
+                              <path d="M5 13.5V15h1.5l7.086-7.086-1.5-1.5L5 13.5z" />
+                              <path d="M14.207 3.293a1 1 0 0 1 1.414 0l1.086 1.086a1 1 0 0 1 0 1.414l-1.086 1.086-2.5-2.5 1.086-1.086z" />
+                            </svg>
+                          </button>
+
+                          {/* Eliminar lote */}
+                          <button
+                            type="button"
+                            aria-label="Eliminar lote"
+                            onClick={() => handleDeleteLot(lot.id)}
+                            className="inline-flex items-center justify-center w-7 h-7 rounded border border-red-700 hover:bg-red-900/60 text-red-300"
+                          >
+                            <svg
+                              xmlns="http://www.w3.org/2000/svg"
+                              viewBox="0 0 20 20"
+                              fill="currentColor"
+                              className="w-4 h-4"
+                            >
+                              <path d="M6 7h2v9H6zM12 7h2v9h-2z" />
+                              <path d="M4 5h12v2H4z" />
+                              <path d="M8 3h4v2H8z" />
+                            </svg>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -854,10 +1003,23 @@ export default function HomePage() {
 
         {/* FORM PRENDA */}
         <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-          <h2 className="text-lg font-semibold mb-3">Añadir nueva prenda</h2>
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h2 className="text-lg font-semibold">
+              {editingItem ? "Editar prenda" : "Añadir nueva prenda"}
+            </h2>
+            {editingItem && (
+              <button
+                type="button"
+                onClick={resetItemForm}
+                className="text-xs text-slate-300 underline"
+              >
+                Cancelar edición
+              </button>
+            )}
+          </div>
           <form
             className="grid gap-3 md:grid-cols-4 md:items-end"
-            onSubmit={handleCreateItem}
+            onSubmit={handleSubmitItem}
           >
             <div className="md:col-span-2">
               <label className="block text-xs text-slate-300 mb-1">
@@ -993,7 +1155,11 @@ export default function HomePage() {
                 disabled={savingItem}
                 className="inline-flex items-center rounded-md bg-sky-500 px-3 py-1.5 text-sm font-medium text-black hover:bg-sky-400 disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {savingItem ? "Guardando..." : "Guardar prenda"}
+                {savingItem
+                  ? "Guardando..."
+                  : editingItem
+                  ? "Guardar cambios"
+                  : "Guardar prenda"}
               </button>
               {itemFormError && (
                 <p className="text-xs text-red-400">{itemFormError}</p>
@@ -1004,11 +1170,57 @@ export default function HomePage() {
 
         {/* LISTA PRENDAS */}
         <div>
-          <h2 className="text-lg font-semibold mb-3">Prendas</h2>
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 mb-3">
+            <h2 className="text-lg font-semibold">Prendas</h2>
+            <div className="flex gap-3">
+              {/* Filtro por lote */}
+              <div>
+                <label className="block text-xs text-slate-300 mb-1">
+                  Filtrar por lote
+                </label>
+                <select
+                  value={filterLotIdTable}
+                  onChange={(e) => setFilterLotIdTable(e.target.value)}
+                  className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-white"
+                >
+                  <option value="all">Todos</option>
+                  <option value="no_lot">Sin lote</option>
+                  {lots.map((lot) => (
+                    <option key={lot.id} value={lot.id}>
+                      {lot.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filtro por estado */}
+              <div>
+                <label className="block text-xs text-slate-300 mb-1">
+                  Estado
+                </label>
+                <select
+                  value={filterStatusTable}
+                  onChange={(e) =>
+                    setFilterStatusTable(
+                      e.target.value as "all" | ItemStatus
+                    )
+                  }
+                  className="rounded-md border border-slate-700 bg-slate-950 px-2 py-1 text-sm text-white"
+                >
+                  <option value="all">Todos</option>
+                  <option value="for_sale">En venta</option>
+                  <option value="sold">Vendida</option>
+                  <option value="reserved">Reservada</option>
+                  <option value="returned">Devuelta</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           {loadingItems ? (
             <p>Cargando prendas...</p>
-          ) : items.length === 0 ? (
-            <p>No has registrado prendas todavía.</p>
+          ) : itemsForTable.length === 0 ? (
+            <p>No hay prendas que cumplan los filtros seleccionados.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm border border-slate-800">
@@ -1028,7 +1240,7 @@ export default function HomePage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {items.map((item) => {
+                  {itemsForTable.map((item) => {
                     const lot = lots.find((l) => l.id === item.lot_id);
                     const profit = getItemProfit(item);
                     const daysToSell = getItemDaysToSell(item);
@@ -1074,12 +1286,74 @@ export default function HomePage() {
                           {daysToSell != null ? daysToSell : "-"}
                         </td>
                         <td className="px-3 py-2 text-right">
-                          <button
-                            onClick={() => handleDeleteItem(item.id)}
-                            className="text-xs text-red-300 underline"
-                          >
-                            Eliminar
-                          </button>
+                          <div className="flex justify-end gap-2">
+                            {/* Editar prenda */}
+                            <button
+                              type="button"
+                              aria-label="Editar prenda"
+                              onClick={() => {
+                                setEditingItem(item);
+                                setItemLotId(item.lot_id ?? "");
+                                setItemName(item.name);
+                                setItemSize(item.size ?? "");
+                                setItemListingDate(
+                                  item.listing_date ?? ""
+                                );
+                                setItemSaleDate(item.sale_date ?? "");
+                                setItemStatus(item.status);
+                                setItemPurchaseCost(
+                                  item.purchase_cost != null
+                                    ? String(item.purchase_cost)
+                                    : ""
+                                );
+                                setItemSalePrice(
+                                  item.sale_price != null
+                                    ? String(item.sale_price)
+                                    : ""
+                                );
+                                setItemPlatformFee(
+                                  item.platform_fee != null
+                                    ? String(item.platform_fee)
+                                    : ""
+                                );
+                                setItemShippingCost(
+                                  item.shipping_cost != null
+                                    ? String(item.shipping_cost)
+                                    : ""
+                                );
+                              }}
+                              className="inline-flex items-center justify-center w-7 h-7 rounded border border-slate-700 hover:bg-slate-800 text-slate-200"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                                className="w-4 h-4"
+                              >
+                                <path d="M5 13.5V15h1.5l7.086-7.086-1.5-1.5L5 13.5z" />
+                                <path d="M14.207 3.293a1 1 0 0 1 1.414 0l1.086 1.086a1 1 0 0 1 0 1.414l-1.086 1.086-2.5-2.5 1.086-1.086z" />
+                              </svg>
+                            </button>
+
+                            {/* Eliminar prenda */}
+                            <button
+                              onClick={() => handleDeleteItem(item.id)}
+                              className="inline-flex items-center justify-center w-7 h-7 rounded border border-red-700 hover:bg-red-900/60 text-red-300"
+                              type="button"
+                              aria-label="Eliminar prenda"
+                            >
+                              <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                                className="w-4 h-4"
+                              >
+                                <path d="M6 7h2v9H6zM12 7h2v9h-2z" />
+                                <path d="M4 5h12v2H4z" />
+                                <path d="M8 3h4v2H8z" />
+                              </svg>
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
