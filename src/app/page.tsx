@@ -108,7 +108,7 @@ function statusBadgeClass(status: ItemStatus) {
   }
 }
 
-/* ---------- Iconos (SVG inline, sin dependencias) ---------- */
+/* ---------- Iconos (SVG inline) ---------- */
 function IconTrash(props: { className?: string }) {
   return (
     <svg
@@ -185,6 +185,24 @@ function IconPlus(props: { className?: string }) {
   );
 }
 
+function IconX(props: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      className={props.className}
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M18 6L6 18" />
+      <path d="M6 6l12 12" />
+    </svg>
+  );
+}
+
 function Input({
   className,
   ...props
@@ -215,6 +233,72 @@ function Select({
   );
 }
 
+/* ---------- Modal simple (mobile friendly) ---------- */
+function Modal({
+  open,
+  title,
+  onClose,
+  children,
+}: {
+  open: boolean;
+  title: string;
+  onClose: () => void;
+  children: React.ReactNode;
+}) {
+  useEffect(() => {
+    if (!open) return;
+
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      document.body.style.overflow = prev;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  return (
+    <div className="fixed inset-0 z-50">
+      <button
+        type="button"
+        className="absolute inset-0 bg-black/60"
+        onClick={onClose}
+        aria-label="Cerrar modal"
+      />
+      <div className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-auto rounded-t-2xl border border-slate-800 bg-slate-950 p-4 shadow-2xl shadow-black/50">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <p className="text-base font-semibold">{title}</p>
+            <p className="mt-0.5 text-xs text-slate-400">Pulsa ESC o toca fuera para cerrar.</p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center justify-center rounded-full border border-slate-700 p-2 text-slate-200"
+            aria-label="Cerrar"
+          >
+            <IconX className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div className="mt-4">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function isDesktopNow() {
+  if (typeof window === 'undefined') return true;
+  return window.matchMedia('(min-width: 768px)').matches;
+}
+
 export default function HomePage() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
@@ -227,6 +311,10 @@ export default function HomePage() {
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
+  // --- MODALES (mobile) ---
+  const [lotModalOpen, setLotModalOpen] = useState(false);
+  const [itemModalOpen, setItemModalOpen] = useState(false);
+
   // --- formulario lote ---
   const [editingLotId, setEditingLotId] = useState<string | null>(null);
   const [lotName, setLotName] = useState('');
@@ -238,6 +326,7 @@ export default function HomePage() {
   const [lotSaving, setLotSaving] = useState(false);
 
   // --- formulario prenda ---
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [itemName, setItemName] = useState('');
   const [itemLotId, setItemLotId] = useState<string | 'none'>('none');
   const [itemSize, setItemSize] = useState('');
@@ -470,6 +559,12 @@ export default function HomePage() {
     setLotNotes('');
   };
 
+  const openNewLot = () => {
+    resetLotForm();
+    setActiveTab('lots');
+    setLotModalOpen(true);
+  };
+
   const handleEditLot = (lot: Lot) => {
     setEditingLotId(lot.id);
     setLotName(lot.name);
@@ -479,9 +574,14 @@ export default function HomePage() {
     setLotProvider(lot.provider ?? '');
     setLotNotes(lot.notes ?? '');
     setActiveTab('lots');
-    setTimeout(() => {
-      document.getElementById('lot-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 50);
+
+    if (isDesktopNow()) {
+      setTimeout(() => {
+        document.getElementById('lot-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+    } else {
+      setLotModalOpen(true);
+    }
   };
 
   const handleSubmitLot = async (e: React.FormEvent) => {
@@ -514,6 +614,7 @@ export default function HomePage() {
       }
 
       resetLotForm();
+      setLotModalOpen(false);
       await loadData(user);
     } finally {
       setLotSaving(false);
@@ -531,6 +632,7 @@ export default function HomePage() {
 
   // --- helpers formulario prenda ---
   const resetItemForm = () => {
+    setEditingItemId(null);
     setItemName('');
     setItemLotId('none');
     setItemSize('');
@@ -542,6 +644,42 @@ export default function HomePage() {
     setItemPlatformFee('');
     setItemShippingCost('');
     setShowAdvancedCosts(false);
+  };
+
+  const openNewItem = () => {
+    resetItemForm();
+    setActiveTab('items');
+    setItemModalOpen(true);
+  };
+
+  const handleEditItem = (item: Item) => {
+    setEditingItemId(item.id);
+    setItemName(item.name ?? '');
+    setItemLotId(item.lot_id ? item.lot_id : 'none');
+    setItemSize(item.size ?? '');
+    setItemListingDate(item.listing_date ?? '');
+    setItemSaleDate(item.sale_date ?? '');
+    setItemStatus(item.status ?? 'for_sale');
+
+    setItemPurchaseCost(item.purchase_cost != null ? String(item.purchase_cost) : '');
+    setItemSalePrice(item.sale_price != null ? String(item.sale_price) : '');
+
+    const fee = item.platform_fee ?? 0;
+    const ship = item.shipping_cost ?? 0;
+    const shouldShowAdv = fee !== 0 || ship !== 0;
+    setShowAdvancedCosts(shouldShowAdv);
+    setItemPlatformFee(shouldShowAdv ? String(fee) : '');
+    setItemShippingCost(shouldShowAdv ? String(ship) : '');
+
+    setActiveTab('items');
+
+    if (isDesktopNow()) {
+      setTimeout(() => {
+        document.getElementById('item-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 50);
+    } else {
+      setItemModalOpen(true);
+    }
   };
 
   const handleSubmitItem = async (e: React.FormEvent) => {
@@ -578,8 +716,14 @@ export default function HomePage() {
         shipping_cost: shippingCostNum,
       };
 
-      await supabase.from('items').insert(payload);
+      if (editingItemId) {
+        await supabase.from('items').update(payload).eq('id', editingItemId).eq('user_id', user.id);
+      } else {
+        await supabase.from('items').insert(payload);
+      }
+
       resetItemForm();
+      setItemModalOpen(false);
       await loadData(user);
     } finally {
       setItemSaving(false);
@@ -600,6 +744,222 @@ export default function HomePage() {
     { id: 'lots', label: 'Lotes' },
     { id: 'items', label: 'Prendas' },
   ];
+
+  const LotForm = (
+    <form
+      onSubmit={handleSubmitLot}
+      className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2 lg:grid-cols-3 sm:text-sm"
+    >
+      <div className="flex flex-col gap-1">
+        <label className="text-slate-300">Nombre del lote</label>
+        <Input value={lotName} onChange={(e) => setLotName(e.target.value)} required />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-slate-300">Fecha compra</label>
+        <Input type="date" value={lotPurchaseDate} onChange={(e) => setLotPurchaseDate(e.target.value)} />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-slate-300">Nº prendas</label>
+        <Input
+          type="number"
+          min={0}
+          value={lotItemsCount}
+          onChange={(e) => setLotItemsCount(e.target.value)}
+          placeholder="Ej: 10"
+        />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-slate-300">Coste total (€)</label>
+        <Input
+          type="number"
+          step="0.01"
+          min={0}
+          value={lotTotalCost}
+          onChange={(e) => setLotTotalCost(e.target.value)}
+          placeholder="Ej: 300"
+        />
+        <p className="text-[11px] text-slate-500">
+          Coste unitario calculado:{' '}
+          {(() => {
+            const c = parseNumberInput(lotTotalCost);
+            const n = lotItemsCount.trim() ? parseInt(lotItemsCount, 10) : null;
+            if (!c || !n || n <= 0) return '—';
+            return formatCurrency(c / n);
+          })()}
+        </p>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-slate-300">Proveedor</label>
+        <Input value={lotProvider} onChange={(e) => setLotProvider(e.target.value)} placeholder="Opcional" />
+      </div>
+
+      <div className="flex flex-col gap-1 lg:col-span-2">
+        <label className="text-slate-300">Notas</label>
+        <Input value={lotNotes} onChange={(e) => setLotNotes(e.target.value)} placeholder="Opcional" />
+      </div>
+
+      <div className="mt-1 flex items-center justify-end gap-2 sm:col-span-2 lg:col-span-3">
+        {editingLotId && (
+          <button
+            type="button"
+            onClick={() => {
+              resetLotForm();
+              setLotModalOpen(false);
+            }}
+            className="rounded-md border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:border-slate-500"
+          >
+            Cancelar
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={lotSaving}
+          className="rounded-md bg-emerald-500 px-4 py-2 text-xs font-medium text-slate-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {lotSaving ? 'Guardando…' : editingLotId ? 'Actualizar' : 'Guardar'}
+        </button>
+      </div>
+    </form>
+  );
+
+  const ItemForm = (
+    <form
+      onSubmit={handleSubmitItem}
+      className="grid grid-cols-1 gap-3 text-xs sm:grid-cols-2 lg:grid-cols-3 sm:text-sm"
+    >
+      <div className="flex flex-col gap-1">
+        <label className="text-slate-300">Nombre</label>
+        <Input value={itemName} onChange={(e) => setItemName(e.target.value)} required />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-slate-300">Lote (opcional)</label>
+        <Select value={itemLotId} onChange={(e) => setItemLotId(e.target.value as any)}>
+          <option value="none">Sin lote</option>
+          {lots.map((lot) => (
+            <option key={lot.id} value={lot.id}>
+              {lot.name}
+            </option>
+          ))}
+        </Select>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-slate-300">Talla</label>
+        <Input value={itemSize} onChange={(e) => setItemSize(e.target.value)} placeholder="Ej: M / 38" />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-slate-300">Fecha publicación</label>
+        <Input type="date" value={itemListingDate} onChange={(e) => setItemListingDate(e.target.value)} />
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-slate-300">Estado</label>
+        <Select value={itemStatus} onChange={(e) => setItemStatus(e.target.value as ItemStatus)}>
+          <option value="for_sale">En venta</option>
+          <option value="sold">Vendida</option>
+          <option value="reserved">Reservada</option>
+          <option value="returned">Devuelta</option>
+        </Select>
+      </div>
+
+      <div className="flex flex-col gap-1">
+        <label className="text-slate-300">Coste compra (€)</label>
+        <Input
+          type="number"
+          step="0.01"
+          min={0}
+          value={itemPurchaseCost}
+          onChange={(e) => setItemPurchaseCost(e.target.value)}
+          placeholder="Si vacío y tiene lote → coste unit."
+        />
+      </div>
+
+      {itemStatus === 'sold' && (
+        <>
+          <div className="flex flex-col gap-1">
+            <label className="text-slate-300">Fecha venta</label>
+            <Input type="date" value={itemSaleDate} onChange={(e) => setItemSaleDate(e.target.value)} />
+          </div>
+
+          <div className="flex flex-col gap-1">
+            <label className="text-slate-300">Precio venta (€)</label>
+            <Input
+              type="number"
+              step="0.01"
+              min={0}
+              value={itemSalePrice}
+              onChange={(e) => setItemSalePrice(e.target.value)}
+            />
+          </div>
+        </>
+      )}
+
+      <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-3">
+        <button
+          type="button"
+          onClick={() => setShowAdvancedCosts((v) => !v)}
+          className="rounded-full border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:border-slate-500"
+        >
+          {showAdvancedCosts ? 'Ocultar costes avanzados' : 'Mostrar costes avanzados'}
+        </button>
+      </div>
+
+      {showAdvancedCosts && (
+        <>
+          <div className="flex flex-col gap-1">
+            <label className="text-slate-300">Comisión plataforma (€)</label>
+            <Input
+              type="number"
+              step="0.01"
+              min={0}
+              value={itemPlatformFee}
+              onChange={(e) => setItemPlatformFee(e.target.value)}
+              placeholder="Normalmente 0"
+            />
+          </div>
+          <div className="flex flex-col gap-1">
+            <label className="text-slate-300">Envío asumido (€)</label>
+            <Input
+              type="number"
+              step="0.01"
+              min={0}
+              value={itemShippingCost}
+              onChange={(e) => setItemShippingCost(e.target.value)}
+              placeholder="Normalmente 0"
+            />
+          </div>
+        </>
+      )}
+
+      <div className="mt-1 flex items-center justify-end gap-2 sm:col-span-2 lg:col-span-3">
+        {editingItemId && (
+          <button
+            type="button"
+            onClick={() => {
+              resetItemForm();
+              setItemModalOpen(false);
+            }}
+            className="rounded-md border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:border-slate-500"
+          >
+            Cancelar edición
+          </button>
+        )}
+        <button
+          type="submit"
+          disabled={itemSaving}
+          className="rounded-md bg-emerald-500 px-4 py-2 text-xs font-medium text-slate-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {itemSaving ? 'Guardando…' : editingItemId ? 'Actualizar' : 'Guardar'}
+        </button>
+      </div>
+    </form>
+  );
 
   if (initialLoading) {
     return (
@@ -687,6 +1047,27 @@ export default function HomePage() {
           </section>
         ) : (
           <>
+            {/* MODALES MOBILE */}
+            <Modal
+              open={lotModalOpen}
+              title={editingLotId ? 'Editar lote' : 'Nuevo lote'}
+              onClose={() => {
+                setLotModalOpen(false);
+              }}
+            >
+              {LotForm}
+            </Modal>
+
+            <Modal
+              open={itemModalOpen}
+              title={editingItemId ? 'Editar prenda' : 'Nueva prenda'}
+              onClose={() => {
+                setItemModalOpen(false);
+              }}
+            >
+              {ItemForm}
+            </Modal>
+
             {/* FILTROS PERIODO + KPIS */}
             <section className="mb-6 space-y-3">
               <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3 sm:p-4">
@@ -863,90 +1244,25 @@ export default function HomePage() {
 
             {activeTab === 'lots' && (
               <section className="space-y-4">
-                <div id="lot-form" className="rounded-xl border border-slate-800 bg-slate-900/70 p-3 sm:p-4">
+                {/* FORM DESKTOP */}
+                <div id="lot-form" className="hidden rounded-xl border border-slate-800 bg-slate-900/70 p-3 sm:p-4 md:block">
                   <h2 className="text-sm font-semibold sm:text-base">
                     {editingLotId ? 'Editar lote' : 'Añadir nuevo lote'}
                   </h2>
-
-                  <form
-                    onSubmit={handleSubmitLot}
-                    className="mt-3 grid grid-cols-1 gap-3 text-xs sm:grid-cols-2 lg:grid-cols-3 sm:text-sm"
-                  >
-                    <div className="flex flex-col gap-1">
-                      <label className="text-slate-300">Nombre del lote</label>
-                      <Input value={lotName} onChange={(e) => setLotName(e.target.value)} required />
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <label className="text-slate-300">Fecha compra</label>
-                      <Input type="date" value={lotPurchaseDate} onChange={(e) => setLotPurchaseDate(e.target.value)} />
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <label className="text-slate-300">Nº prendas</label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={lotItemsCount}
-                        onChange={(e) => setLotItemsCount(e.target.value)}
-                        placeholder="Ej: 10"
-                      />
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <label className="text-slate-300">Coste total (€)</label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min={0}
-                        value={lotTotalCost}
-                        onChange={(e) => setLotTotalCost(e.target.value)}
-                        placeholder="Ej: 300"
-                      />
-                      <p className="text-[11px] text-slate-500">
-                        Coste unitario calculado:{' '}
-                        {(() => {
-                          const c = parseNumberInput(lotTotalCost);
-                          const n = lotItemsCount.trim() ? parseInt(lotItemsCount, 10) : null;
-                          if (!c || !n || n <= 0) return '—';
-                          return formatCurrency(c / n);
-                        })()}
-                      </p>
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <label className="text-slate-300">Proveedor</label>
-                      <Input value={lotProvider} onChange={(e) => setLotProvider(e.target.value)} placeholder="Opcional" />
-                    </div>
-
-                    <div className="flex flex-col gap-1 lg:col-span-2">
-                      <label className="text-slate-300">Notas</label>
-                      <Input value={lotNotes} onChange={(e) => setLotNotes(e.target.value)} placeholder="Opcional" />
-                    </div>
-
-                    <div className="mt-1 flex items-center justify-end gap-2 sm:col-span-2 lg:col-span-3">
-                      {editingLotId && (
-                        <button
-                          type="button"
-                          onClick={resetLotForm}
-                          className="rounded-md border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:border-slate-500"
-                        >
-                          Cancelar
-                        </button>
-                      )}
-                      <button
-                        type="submit"
-                        disabled={lotSaving}
-                        className="rounded-md bg-emerald-500 px-4 py-2 text-xs font-medium text-slate-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {lotSaving ? 'Guardando…' : editingLotId ? 'Actualizar' : 'Guardar'}
-                      </button>
-                    </div>
-                  </form>
+                  <div className="mt-3">{LotForm}</div>
                 </div>
 
                 <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3 sm:p-4">
-                  <h3 className="text-sm font-semibold sm:text-base">Lotes</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold sm:text-base">Lotes</h3>
+                    <button
+                      type="button"
+                      onClick={() => (isDesktopNow() ? null : openNewLot())}
+                      className="md:hidden rounded-full bg-emerald-500 px-3 py-2 text-xs font-semibold text-slate-950"
+                    >
+                      + Lote
+                    </button>
+                  </div>
 
                   {lots.length === 0 ? (
                     <p className="mt-3 text-xs text-slate-400">Aún no has creado ningún lote.</p>
@@ -1071,142 +1387,26 @@ export default function HomePage() {
 
             {activeTab === 'items' && (
               <section className="space-y-4">
-                <div id="item-form" className="rounded-xl border border-slate-800 bg-slate-900/70 p-3 sm:p-4">
-                  <h2 className="text-sm font-semibold sm:text-base">Añadir nueva prenda</h2>
-
-                  <form
-                    onSubmit={handleSubmitItem}
-                    className="mt-3 grid grid-cols-1 gap-3 text-xs sm:grid-cols-2 lg:grid-cols-3 sm:text-sm"
-                  >
-                    <div className="flex flex-col gap-1">
-                      <label className="text-slate-300">Nombre</label>
-                      <Input value={itemName} onChange={(e) => setItemName(e.target.value)} required />
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <label className="text-slate-300">Lote (opcional)</label>
-                      <Select value={itemLotId} onChange={(e) => setItemLotId(e.target.value as any)}>
-                        <option value="none">Sin lote</option>
-                        {lots.map((lot) => (
-                          <option key={lot.id} value={lot.id}>
-                            {lot.name}
-                          </option>
-                        ))}
-                      </Select>
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <label className="text-slate-300">Talla</label>
-                      <Input value={itemSize} onChange={(e) => setItemSize(e.target.value)} placeholder="Ej: M / 38" />
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <label className="text-slate-300">Fecha publicación</label>
-                      <Input type="date" value={itemListingDate} onChange={(e) => setItemListingDate(e.target.value)} />
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <label className="text-slate-300">Estado</label>
-                      <Select value={itemStatus} onChange={(e) => setItemStatus(e.target.value as ItemStatus)}>
-                        <option value="for_sale">En venta</option>
-                        <option value="sold">Vendida</option>
-                        <option value="reserved">Reservada</option>
-                        <option value="returned">Devuelta</option>
-                      </Select>
-                    </div>
-
-                    <div className="flex flex-col gap-1">
-                      <label className="text-slate-300">Coste compra (€)</label>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        min={0}
-                        value={itemPurchaseCost}
-                        onChange={(e) => setItemPurchaseCost(e.target.value)}
-                        placeholder="Si vacío y tiene lote → coste unit."
-                      />
-                    </div>
-
-                    {/* Campos de venta (solo cuando está vendida) */}
-                    {itemStatus === 'sold' && (
-                      <>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-slate-300">Fecha venta</label>
-                          <Input type="date" value={itemSaleDate} onChange={(e) => setItemSaleDate(e.target.value)} />
-                        </div>
-
-                        <div className="flex flex-col gap-1">
-                          <label className="text-slate-300">Precio venta (€)</label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min={0}
-                            value={itemSalePrice}
-                            onChange={(e) => setItemSalePrice(e.target.value)}
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    <div className="flex items-center gap-2 sm:col-span-2 lg:col-span-3">
-                      <button
-                        type="button"
-                        onClick={() => setShowAdvancedCosts((v) => !v)}
-                        className="rounded-full border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:border-slate-500"
-                      >
-                        {showAdvancedCosts ? 'Ocultar costes avanzados' : 'Mostrar costes avanzados'}
-                      </button>
-                    </div>
-
-                    {showAdvancedCosts && (
-                      <>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-slate-300">Comisión plataforma (€)</label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min={0}
-                            value={itemPlatformFee}
-                            onChange={(e) => setItemPlatformFee(e.target.value)}
-                            placeholder="Normalmente 0"
-                          />
-                        </div>
-                        <div className="flex flex-col gap-1">
-                          <label className="text-slate-300">Envío asumido (€)</label>
-                          <Input
-                            type="number"
-                            step="0.01"
-                            min={0}
-                            value={itemShippingCost}
-                            onChange={(e) => setItemShippingCost(e.target.value)}
-                            placeholder="Normalmente 0"
-                          />
-                        </div>
-                      </>
-                    )}
-
-                    <div className="mt-1 flex items-center justify-end gap-2 sm:col-span-2 lg:col-span-3">
-                      <button
-                        type="button"
-                        onClick={resetItemForm}
-                        className="rounded-md border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:border-slate-500"
-                      >
-                        Limpiar
-                      </button>
-                      <button
-                        type="submit"
-                        disabled={itemSaving}
-                        className="rounded-md bg-emerald-500 px-4 py-2 text-xs font-medium text-slate-950 hover:bg-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        {itemSaving ? 'Guardando…' : 'Guardar'}
-                      </button>
-                    </div>
-                  </form>
+                {/* FORM DESKTOP */}
+                <div id="item-form" className="hidden rounded-xl border border-slate-800 bg-slate-900/70 p-3 sm:p-4 md:block">
+                  <h2 className="text-sm font-semibold sm:text-base">
+                    {editingItemId ? 'Editar prenda' : 'Añadir nueva prenda'}
+                  </h2>
+                  <div className="mt-3">{ItemForm}</div>
                 </div>
 
-                {/* Filtros listado prendas */}
+                {/* Filtros + listado */}
                 <div className="rounded-xl border border-slate-800 bg-slate-900/70 p-3 sm:p-4">
-                  <h3 className="text-sm font-semibold sm:text-base">Prendas</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold sm:text-base">Prendas</h3>
+                    <button
+                      type="button"
+                      onClick={() => (isDesktopNow() ? null : openNewItem())}
+                      className="md:hidden rounded-full bg-sky-500 px-3 py-2 text-xs font-semibold text-slate-950"
+                    >
+                      + Prenda
+                    </button>
+                  </div>
 
                   <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
                     <div className="flex flex-col gap-1">
@@ -1302,7 +1502,11 @@ export default function HomePage() {
                                   <td
                                     className={cx(
                                       'px-3 py-2 text-right',
-                                      item.sale_price == null ? 'text-slate-400' : profit >= 0 ? 'text-emerald-300' : 'text-rose-300'
+                                      item.sale_price == null
+                                        ? 'text-slate-400'
+                                        : profit >= 0
+                                        ? 'text-emerald-300'
+                                        : 'text-rose-300'
                                     )}
                                   >
                                     {item.sale_price != null ? formatCurrency(profit) : '—'}
@@ -1310,8 +1514,16 @@ export default function HomePage() {
                                   <td className="px-3 py-2 text-right">
                                     <button
                                       type="button"
+                                      onClick={() => handleEditItem(item)}
+                                      className="inline-flex items-center justify-center rounded-md border border-slate-700 px-2 py-2 text-sky-300 hover:border-sky-600/60 hover:text-sky-200"
+                                      aria-label="Editar prenda"
+                                    >
+                                      <IconPencil className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      type="button"
                                       onClick={() => handleDeleteItem(item.id)}
-                                      className="inline-flex items-center justify-center rounded-md border border-slate-700 px-2 py-2 text-rose-300 hover:border-rose-600/60 hover:text-rose-200"
+                                      className="ml-2 inline-flex items-center justify-center rounded-md border border-slate-700 px-2 py-2 text-rose-300 hover:border-rose-600/60 hover:text-rose-200"
                                       aria-label="Eliminar prenda"
                                     >
                                       <IconTrash className="h-4 w-4" />
@@ -1358,19 +1570,34 @@ export default function HomePage() {
                                   <p
                                     className={cx(
                                       'text-xs font-semibold',
-                                      item.sale_price == null ? 'text-slate-400' : profit >= 0 ? 'text-emerald-300' : 'text-rose-300'
+                                      item.sale_price == null
+                                        ? 'text-slate-400'
+                                        : profit >= 0
+                                        ? 'text-emerald-300'
+                                        : 'text-rose-300'
                                     )}
                                   >
                                     {item.sale_price != null ? formatCurrency(profit) : '—'}
                                   </p>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteItem(item.id)}
-                                    className="mt-2 inline-flex items-center gap-2 rounded-full bg-slate-800 px-3 py-2 text-[11px] text-rose-200"
-                                  >
-                                    <IconTrash className="h-4 w-4" />
-                                    Borrar
-                                  </button>
+
+                                  <div className="mt-2 flex justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleEditItem(item)}
+                                      className="inline-flex items-center gap-2 rounded-full bg-slate-800 px-3 py-2 text-[11px] text-sky-200"
+                                    >
+                                      <IconPencil className="h-4 w-4" />
+                                      Editar
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteItem(item.id)}
+                                      className="inline-flex items-center gap-2 rounded-full bg-slate-800 px-3 py-2 text-[11px] text-rose-200"
+                                    >
+                                      <IconTrash className="h-4 w-4" />
+                                      Borrar
+                                    </button>
+                                  </div>
                                 </div>
                               </div>
 
@@ -1415,10 +1642,7 @@ export default function HomePage() {
           <div className="flex items-center gap-2 rounded-full bg-slate-900/90 px-3 py-2 text-xs shadow-lg shadow-black/40">
             <button
               type="button"
-              onClick={() => {
-                setActiveTab('lots');
-                setTimeout(() => document.getElementById('lot-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-              }}
+              onClick={openNewLot}
               className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-3 py-2 text-xs font-semibold text-slate-950"
             >
               <IconPlus className="h-4 w-4" />
@@ -1426,10 +1650,7 @@ export default function HomePage() {
             </button>
             <button
               type="button"
-              onClick={() => {
-                setActiveTab('items');
-                setTimeout(() => document.getElementById('item-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
-              }}
+              onClick={openNewItem}
               className="inline-flex items-center gap-2 rounded-full bg-sky-500 px-3 py-2 text-xs font-semibold text-slate-950"
             >
               <IconPlus className="h-4 w-4" />
