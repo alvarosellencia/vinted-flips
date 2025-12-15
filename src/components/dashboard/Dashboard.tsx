@@ -23,7 +23,11 @@ import BottomNav from "./BottomNav";
 
 type View = "summary" | "items" | "lots";
 
-export default function Dashboard({ userId }: { userId: string }) {
+type DashboardProps = {
+  userId?: string;
+};
+
+export default function Dashboard({ userId }: DashboardProps) {
   const router = useRouter();
   const [view, setView] = useState<View>("summary");
   const [loading, setLoading] = useState(true);
@@ -52,7 +56,9 @@ export default function Dashboard({ userId }: { userId: string }) {
     const uid = userId ?? sessionData.session?.user?.id;
 
     if (!uid) {
-      setError("No se pudo obtener el userId de la sesión. Cierra sesión y vuelve a entrar con el magic link.");
+      setError(
+        "No se pudo obtener el userId de la sesión. Cierra sesión y vuelve a entrar con el magic link."
+      );
       setLots([]);
       setItems([]);
       setLoading(false);
@@ -95,7 +101,9 @@ export default function Dashboard({ userId }: { userId: string }) {
   }, [userId]);
 
   const kpis = useMemo(() => {
-    const soldInPeriod = items.filter((it) => it.status === "sold" && inPeriodBySaleDate(it, from, to));
+    const soldInPeriod = items.filter(
+      (it) => it.status === "sold" && inPeriodBySaleDate(it, from, to)
+    );
     const netSoldPeriod = soldInPeriod.reduce((acc, it) => acc + netRevenue(it), 0);
 
     const totalLotsCost = lots.reduce((acc, l) => acc + (l.total_cost ?? 0), 0);
@@ -143,7 +151,9 @@ export default function Dashboard({ userId }: { userId: string }) {
         return resolved?.id === lot.id;
       });
 
-      const soldInPeriod = lotItems.filter((it) => it.status === "sold" && inPeriodBySaleDate(it, from, to));
+      const soldInPeriod = lotItems.filter(
+        (it) => it.status === "sold" && inPeriodBySaleDate(it, from, to)
+      );
       const revenuePeriod = soldInPeriod.reduce((acc, it) => acc + netRevenue(it), 0);
       const soldCountPeriod = soldInPeriod.length;
 
@@ -163,7 +173,7 @@ export default function Dashboard({ userId }: { userId: string }) {
   };
 
   const onAdd = () => {
-    alert("Añadir: lo conectamos luego (modal crear Lote / Prenda).");
+    alert("Añadir: lo conectamos luego (modal crear Lote / Prenda)." );
   };
 
   if (loading) {
@@ -179,88 +189,95 @@ export default function Dashboard({ userId }: { userId: string }) {
   return (
     <main className="w-full">
       <div className="mx-auto max-w-5xl px-4 pb-28 pt-7">
-      <header className="mb-4 flex items-center justify-between">
-        <div>
-          <div className="text-sm opacity-70">Vinted Flips</div>
-          <h1 className="text-2xl font-semibold">Panel (beta)</h1>
-        </div>
-        <button
-          onClick={signOut}
-          className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10"
-        >
-          Cerrar sesión
-        </button>
-      </header>
-
-      {error && (
-        <div className="mb-4 rounded-2xl border border-white/10 bg-rose-500/10 p-4 text-sm text-rose-200">
-          {error}
-        </div>
-      )}
-
-      {view === "summary" && (
-        <>
-          <PeriodChips
-            mode={periodMode}
-            setMode={setPeriodMode}
-            customFrom={customFrom}
-            setCustomFrom={setCustomFrom}
-            customTo={customTo}
-            setCustomTo={setCustomTo}
-          />
-
-          <div className="mt-4">
-            <KpiCards kpis={kpis} />
+        <header className="mb-4 flex items-center justify-between">
+          <div>
+            <div className="text-sm opacity-70">Vinted Flips</div>
+            <h1 className="text-2xl font-semibold">Panel (beta)</h1>
           </div>
+          <button
+            onClick={signOut}
+            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10"
+          >
+            Cerrar sesión
+          </button>
+        </header>
 
-          <section className="mt-4 pb-24">
-            <h2 className="text-xl font-semibold">Resumen por lote (periodo filtrado)</h2>
+        {error && (
+          <div className="mb-4 rounded-2xl border border-white/10 bg-rose-500/10 p-4 text-sm text-rose-200">
+            {error}
+          </div>
+        )}
 
-            <div className="mt-3 space-y-3">
-              {lotsSummary.map(({ lot, cost, soldCountPeriod, revenuePeriod, profitCurrent }) => {
-                const profitCls = profitCurrent >= 0 ? "text-emerald-300" : "text-rose-300";
-                const roiCost = cost > 0 ? profitCurrent / cost : null;
+        {view === "summary" && (
+          <>
+            <PeriodChips
+              mode={periodMode}
+              setMode={setPeriodMode}
+              customFrom={customFrom}
+              setCustomFrom={setCustomFrom}
+              customTo={customTo}
+              setCustomTo={setCustomTo}
+            />
 
-                return (
-                  <div key={lot.id} className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="min-w-0">
-                        <div className="truncate text-lg font-semibold">{lot.name}</div>
-                        <div className="mt-1 text-sm opacity-75">
-                          Coste: {fmtEUR(cost)} · Vendidas (periodo): {soldCountPeriod} · Ingresos (periodo):{" "}
-                          {fmtEUR(revenuePeriod)}
-                        </div>
-
-                        <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                          <div className="rounded-2xl border border-white/10 bg-[#070b16]/40 p-3">
-                            <div className="opacity-70">ROI coste (actual)</div>
-                            <div className="mt-1 font-semibold">{roiCost == null ? "—" : (roiCost * 100).toFixed(1) + "%"}</div>
-                          </div>
-                          <div className="rounded-2xl border border-white/10 bg-[#070b16]/40 p-3">
-                            <div className="opacity-70">ROI vendidas</div>
-                            <div className="mt-1 font-semibold">{cost > 0 ? ((revenuePeriod / cost) * 100).toFixed(1) + "%" : "—"}</div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className={`shrink-0 text-lg font-semibold ${profitCls}`}>{fmtEUR(profitCurrent)}</div>
-                    </div>
-                  </div>
-                );
-              })}
-
-              {lots.length === 0 && (
-                <div className="rounded-3xl border border-white/10 bg-white/5 p-6 opacity-75">Aún no tienes lotes.</div>
-              )}
+            <div className="mt-4">
+              <KpiCards kpis={kpis} />
             </div>
-          </section>
-        </>
-      )}
 
-      {view === "items" && <ItemsView lots={lots} items={items} />}
-      {view === "lots" && <LotsView lots={lots} items={items} />}
+            <section className="mt-4 pb-24">
+              <h2 className="text-xl font-semibold">Resumen por lote (periodo filtrado)</h2>
 
-      <BottomNav view={view} onChange={setView} onAdd={onAdd} onRefresh={loadAll} />
+              <div className="mt-3 space-y-3">
+                {lotsSummary.map(({ lot, cost, soldCountPeriod, revenuePeriod, profitCurrent }) => {
+                  const profitCls = profitCurrent >= 0 ? "text-emerald-300" : "text-rose-300";
+                  const roiCost = cost > 0 ? profitCurrent / cost : null;
+
+                  return (
+                    <div key={lot.id} className="rounded-3xl border border-white/10 bg-white/5 p-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="min-w-0">
+                          <div className="truncate text-lg font-semibold">{lot.name}</div>
+                          <div className="mt-1 text-sm opacity-75">
+                            Coste: {fmtEUR(cost)} · Vendidas (periodo): {soldCountPeriod} · Ingresos (periodo): {fmtEUR(
+                              revenuePeriod
+                            )}
+                          </div>
+
+                          <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                            <div className="rounded-2xl border border-white/10 bg-[#070b16]/40 p-3">
+                              <div className="opacity-70">ROI coste (actual)</div>
+                              <div className="mt-1 font-semibold">
+                                {roiCost == null ? "—" : (roiCost * 100).toFixed(1) + "%"}
+                              </div>
+                            </div>
+                            <div className="rounded-2xl border border-white/10 bg-[#070b16]/40 p-3">
+                              <div className="opacity-70">ROI vendidas</div>
+                              <div className="mt-1 font-semibold">
+                                {cost > 0 ? ((revenuePeriod / cost) * 100).toFixed(1) + "%" : "—"}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className={`shrink-0 text-lg font-semibold ${profitCls}`}>{fmtEUR(profitCurrent)}</div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {lots.length === 0 && (
+                  <div className="rounded-3xl border border-white/10 bg-white/5 p-6 opacity-75">
+                    Aún no tienes lotes.
+                  </div>
+                )}
+              </div>
+            </section>
+          </>
+        )}
+
+        {view === "items" && <ItemsView lots={lots} items={items} />}
+        {view === "lots" && <LotsView lots={lots} items={items} />}
+
+        <BottomNav view={view} onChange={setView} onAdd={onAdd} onRefresh={loadAll} />
       </div>
     </main>
   );
