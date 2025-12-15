@@ -1,9 +1,104 @@
 @import "tailwindcss";
 
-html, body {
-  height: 100%;
+/* ---------- Base theme (does not fight Tailwind classes) ---------- */
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    margin: 0;
+    background: radial-gradient(1200px 700px at 15% 10%, rgba(16, 185, 129, 0.12), transparent 55%),
+      radial-gradient(900px 600px at 85% 15%, rgba(59, 130, 246, 0.10), transparent 55%),
+      #070b16;
+    color: #e5e7eb;
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
+      "Apple Color Emoji", "Segoe UI Emoji";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  ::selection {
+    background: rgba(16, 185, 129, 0.25);
+  }
 }
 
-body {
-  margin: 0;
+/* ---------- Opinionated but safe component primitives ---------- */
+@layer components {
+  .vf-card {
+    @apply rounded-3xl border border-white/10 bg-white/5 shadow-[0_10px_30px_rgba(0,0,0,0.25)];
+  }
+
+  .vf-card-inner {
+    @apply p-5;
+  }
+
+  .vf-panel {
+    @apply rounded-2xl border border-white/10 bg-[#070b16]/50;
+  }
+
+  .vf-input {
+    @apply w-full rounded-2xl border border-white/10 bg-[#070b16]/60 px-4 py-3 text-slate-100 outline-none;
+    @apply focus:ring-2 focus:ring-emerald-400/30;
+  }
+
+  .vf-chip {
+    @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm;
+    @apply hover:bg-white/10;
+  }
+
+  .vf-btn {
+    @apply inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-semibold;
+    @apply hover:bg-white/10;
+  }
+
+  .vf-btn-primary {
+    @apply inline-flex items-center justify-center rounded-2xl bg-emerald-400 px-4 py-3 font-semibold text-[#070b16];
+    @apply hover:brightness-95;
+  }
+
+  .vf-btn-danger {
+    @apply inline-flex items-center justify-center rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 font-semibold text-rose-200;
+    @apply hover:bg-rose-500/15;
+  }
+}
+
+/* ---------- Minimal defaults for form controls (only when you don't set classes) ---------- */
+@layer base {
+  input,
+  select,
+  textarea {
+    background: rgba(255, 255, 255, 0.06);
+    color: #e5e7eb;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: 12px;
+    padding: 10px 12px;
+    outline: none;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    border-color: rgba(16, 185, 129, 0.55);
+  }
+
+  button {
+    font: inherit;
+  }
 }

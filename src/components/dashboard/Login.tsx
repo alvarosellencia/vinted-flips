@@ -2,17 +2,20 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "../../lib/supabaseClient";
+import { supabase } from "@/lib/supabaseClient";
 
 export default function Login() {
-  const [email, setEmail] = useState("alvaro@sellencia.com");
+  const [email, setEmail] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const signIn = async () => {
     setMsg(null);
     const em = email.trim();
-    if (!em) return;
+    if (!em) {
+      setMsg("Introduce un email válido.");
+      return;
+    }
 
     setBusy(true);
     const { error } = await supabase.auth.signInWithOtp({
@@ -36,6 +39,9 @@ export default function Login() {
         <label className="mt-4 block">
           <span className="mb-1 block text-sm opacity-75">Email</span>
           <input
+            type="email"
+            inputMode="email"
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full rounded-2xl border border-white/10 bg-[#070b16]/60 px-4 py-3 text-slate-100 outline-none focus:ring-2 focus:ring-emerald-400/30"
@@ -48,7 +54,7 @@ export default function Login() {
           disabled={busy}
           className="mt-4 w-full rounded-2xl bg-emerald-400 px-4 py-3 font-semibold text-[#070b16] disabled:opacity-60"
         >
-          {busy ? "Enviando…" : "Enviarme magic link"}
+          {busy ? "Enviando…" : "Enviarme el magic link"}
         </button>
 
         {msg && <div className="mt-4 text-sm opacity-80">{msg}</div>}

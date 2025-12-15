@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "../../lib/supabaseClient";
 import type { ItemRow, LotRow } from "../../lib/types";
 import {
@@ -23,6 +24,7 @@ import BottomNav from "./BottomNav";
 type View = "summary" | "items" | "lots";
 
 export default function Dashboard({ userId }: { userId: string }) {
+  const router = useRouter();
   const [view, setView] = useState<View>("summary");
   const [loading, setLoading] = useState(true);
   const [lots, setLots] = useState<LotRow[]>([]);
@@ -43,11 +45,25 @@ export default function Dashboard({ userId }: { userId: string }) {
     setLoading(true);
     setError(null);
 
+    // Deriva el userId: prioridad al prop (si viene), si no, desde la sesión.
+    const { data: sessionData, error: sessionErr } = await supabase.auth.getSession();
+    if (sessionErr) console.warn(sessionErr);
+
+    const uid = userId ?? sessionData.session?.user?.id;
+
+    if (!uid) {
+      setError("No se pudo obtener el userId de la sesión. Cierra sesión y vuelve a entrar con el magic link.");
+      setLots([]);
+      setItems([]);
+      setLoading(false);
+      return;
+    }
+
     // IMPORTANT: filtra por user_id (RLS + claridad)
     const lotsRes = await supabase
       .from("lots")
       .select("*")
-      .eq("user_id", userId)
+      .eq("user_id", uid)
       .order("purchase_date", { ascending: false });
 
     if (lotsRes.error) {
@@ -59,7 +75,7 @@ export default function Dashboard({ userId }: { userId: string }) {
     const itemsRes = await supabase
       .from("items")
       .select("*")
-      .eq("user_id", userId)
+      .eq("user_id", uid)
       .order("listing_date", { ascending: false });
 
     if (itemsRes.error) {
@@ -143,7 +159,7 @@ export default function Dashboard({ userId }: { userId: string }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    // AuthGate se encargará de volver a Login (no “todo a cero”)
+    router.replace("/");
   };
 
   const onAdd = () => {
@@ -152,20 +168,26 @@ export default function Dashboard({ userId }: { userId: string }) {
 
   if (loading) {
     return (
-      <main className="mx-auto max-w-xl p-6">
-        <div className="rounded-3xl border border-white/10 bg-white/5 p-6">Cargando…</div>
+      <main className="w-full">
+        <div className="mx-auto max-w-5xl px-4 py-7">
+          <div className="rounded-3xl border border-white/10 bg-white/5 p-6">Cargando…</div>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="mx-auto max-w-xl px-4 pb-28 pt-6">
+    <main className="w-full">
+      <div className="mx-auto max-w-5xl px-4 pb-28 pt-7">
       <header className="mb-4 flex items-center justify-between">
         <div>
           <div className="text-sm opacity-70">Vinted Flips</div>
           <h1 className="text-2xl font-semibold">Panel (beta)</h1>
         </div>
-        <button onClick={signOut} className="rounded-2xl bg-white/5 px-4 py-2 text-sm hover:bg-white/10">
+        <button
+          onClick={signOut}
+          className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10"
+        >
           Cerrar sesión
         </button>
       </header>
@@ -239,6 +261,7 @@ export default function Dashboard({ userId }: { userId: string }) {
       {view === "lots" && <LotsView lots={lots} items={items} />}
 
       <BottomNav view={view} onChange={setView} onAdd={onAdd} onRefresh={loadAll} />
+      </div>
     </main>
   );
 }
