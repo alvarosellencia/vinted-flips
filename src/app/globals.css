@@ -21,6 +21,9 @@
       "Apple Color Emoji", "Segoe UI Emoji";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+
+    /* Deja espacio para la bottom nav en móvil + safe area iPhone */
+    padding-bottom: calc(env(safe-area-inset-bottom) + 88px);
   }
 
   a {
@@ -76,6 +79,22 @@
   .vf-btn-danger {
     @apply inline-flex items-center justify-center rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 font-semibold text-rose-200;
     @apply hover:bg-rose-500/15;
+  }
+
+  /* ---------- Bottom nav (mobile-first, modern, safe-area aware) ---------- */
+  .vf-bottomnav {
+    @apply fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#070b16]/80 backdrop-blur-xl;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .vf-navbtn {
+    @apply flex w-[72px] flex-col items-center justify-center rounded-2xl px-2 py-3;
+    @apply hover:bg-white/5 active:scale-[0.98] transition;
+  }
+
+  .vf-navfab {
+    @apply -mt-5 grid h-14 w-14 place-items-center rounded-2xl bg-emerald-400 text-[#070b16];
+    @apply shadow-[0_12px_30px_rgba(0,0,0,0.35)] hover:brightness-95 active:scale-[0.98] transition;
   }
 }
 

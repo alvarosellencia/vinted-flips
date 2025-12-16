@@ -178,7 +178,7 @@ export default function Dashboard({ userId }: DashboardProps) {
   if (loading) {
     return (
       <main className="w-full">
-        <div className="mx-auto max-w-5xl px-4 py-7">
+        <div className="mx-auto max-w-5xl py-7">
           <div className="rounded-3xl border border-white/10 bg-white/5 p-6">Cargando…</div>
         </div>
       </main>
@@ -187,7 +187,7 @@ export default function Dashboard({ userId }: DashboardProps) {
 
   return (
     <main className="w-full">
-      <div className="mx-auto max-w-5xl px-4 pt-7 pb-[calc(7rem+env(safe-area-inset-bottom))]">
+      <div className="mx-auto max-w-5xl pt-7">
         <header className="mb-4 flex items-center justify-between">
           <div>
             <div className="text-sm opacity-70">Vinted Flips</div>
@@ -196,7 +196,7 @@ export default function Dashboard({ userId }: DashboardProps) {
 
           <button
             onClick={signOut}
-            className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10"
+            className="vf-btn"
           >
             Cerrar sesión
           </button>
@@ -232,41 +232,43 @@ export default function Dashboard({ userId }: DashboardProps) {
                   const roiCost = cost > 0 ? profitCurrent / cost : null;
 
                   return (
-                    <div key={lot.id} className="rounded-3xl border border-white/10 bg-white/5 p-5">
-                      <div className="flex items-start justify-between gap-4">
-                        <div className="min-w-0">
-                          <div className="truncate text-lg font-semibold">{lot.name}</div>
-                          <div className="mt-1 text-sm opacity-75">
-                            Coste: {fmtEUR(cost)} · Vendidas (periodo): {soldCountPeriod} · Ingresos (periodo):{" "}
-                            {fmtEUR(revenuePeriod)}
-                          </div>
-
-                          <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
-                            <div className="rounded-2xl border border-white/10 bg-[#070b16]/40 p-3">
-                              <div className="opacity-70">ROI coste (actual)</div>
-                              <div className="mt-1 font-semibold">
-                                {roiCost == null ? "—" : (roiCost * 100).toFixed(1) + "%"}
-                              </div>
+                    <div key={lot.id} className="vf-card">
+                      <div className="vf-card-inner">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <div className="truncate text-lg font-semibold">{lot.name}</div>
+                            <div className="mt-1 text-sm opacity-75">
+                              Coste: {fmtEUR(cost)} · Vendidas (periodo): {soldCountPeriod} · Ingresos (periodo):{" "}
+                              {fmtEUR(revenuePeriod)}
                             </div>
 
-                            <div className="rounded-2xl border border-white/10 bg-[#070b16]/40 p-3">
-                              <div className="opacity-70">ROI vendidas</div>
-                              <div className="mt-1 font-semibold">
-                                {cost > 0 ? ((revenuePeriod / cost) * 100).toFixed(1) + "%" : "—"}
+                            <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+                              <div className="vf-panel p-3">
+                                <div className="opacity-70">ROI coste (actual)</div>
+                                <div className="mt-1 font-semibold">
+                                  {roiCost == null ? "—" : (roiCost * 100).toFixed(1) + "%"}
+                                </div>
+                              </div>
+
+                              <div className="vf-panel p-3">
+                                <div className="opacity-70">ROI vendidas</div>
+                                <div className="mt-1 font-semibold">
+                                  {cost > 0 ? ((revenuePeriod / cost) * 100).toFixed(1) + "%" : "—"}
+                                </div>
                               </div>
                             </div>
                           </div>
+
+                          <div className={`shrink-0 text-lg font-semibold ${profitCls}`}>{fmtEUR(profitCurrent)}</div>
                         </div>
-
-                        <div className={`shrink-0 text-lg font-semibold ${profitCls}`}>{fmtEUR(profitCurrent)}</div>
                       </div>
                     </div>
                   );
                 })}
 
                 {lots.length === 0 && (
-                  <div className="rounded-3xl border border-white/10 bg-white/5 p-6 opacity-75">
-                    Aún no tienes lotes.
+                  <div className="vf-card">
+                    <div className="vf-card-inner opacity-75">Aún no tienes lotes.</div>
                   </div>
                 )}
               </div>

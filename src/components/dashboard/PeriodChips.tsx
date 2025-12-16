@@ -1,17 +1,14 @@
-// src/components/dashboard/PeriodChips.tsx
 "use client";
 
-import React from "react";
+import type { PeriodMode } from "../../lib/metrics";
 
-type PeriodMode = "all" | "month" | "last30" | "custom";
-
-type PeriodChipsProps = {
+type Props = {
   mode: PeriodMode;
-  setMode: (mode: PeriodMode) => void;
+  setMode: (m: PeriodMode) => void;
   customFrom: string;
-  setCustomFrom: (date: string) => void;
+  setCustomFrom: (v: string) => void;
   customTo: string;
-  setCustomTo: (date: string) => void;
+  setCustomTo: (v: string) => void;
 };
 
 export default function PeriodChips({
@@ -21,66 +18,62 @@ export default function PeriodChips({
   setCustomFrom,
   customTo,
   setCustomTo,
-}: PeriodChipsProps) {
+}: Props) {
+  const Chip = ({ label, value }: { label: string; value: PeriodMode }) => (
+    <button
+      type="button"
+      onClick={() => setMode(value)}
+      className={[
+        "vf-chip",
+        "justify-center",
+        "min-w-[9.5rem] sm:min-w-0",
+        mode === value ? "bg-emerald-400/20 border-emerald-400/30" : "",
+      ].join(" ")}
+    >
+      {label}
+    </button>
+  );
+
   return (
-    <div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <button
-          className={`rounded-full px-4 py-2 text-sm font-semibold ${
-            mode === "all" ? "bg-white/10" : "hover:bg-white/10"
-          }`}
-          onClick={() => setMode("all")}
-        >
-          Todo
-        </button>
-
-        <button
-          className={`rounded-full px-4 py-2 text-sm font-semibold ${
-            mode === "month" ? "bg-white/10" : "hover:bg-white/10"
-          }`}
-          onClick={() => setMode("month")}
-        >
-          Este mes
-        </button>
-
-        <button
-          className={`rounded-full px-4 py-2 text-sm font-semibold ${
-            mode === "last30" ? "bg-white/10" : "hover:bg-white/10"
-          }`}
-          onClick={() => setMode("last30")}
-        >
-          Últimos 30 días
-        </button>
-
-        <button
-          className={`rounded-full px-4 py-2 text-sm font-semibold ${
-            mode === "custom" ? "bg-white/10" : "hover:bg-white/10"
-          }`}
-          onClick={() => setMode("custom")}
-        >
-          Personalizado
-        </button>
-      </div>
-
-      {mode === "custom" && (
-        <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
-          <input
-            type="date"
-            className="w-full rounded-md border border-white/20 bg-[#070b16]/40 px-3 py-2 text-sm"
-            value={customFrom}
-            onChange={(e) => setCustomFrom(e.target.value)}
-          />
-
-          <input
-            type="date"
-            className="w-full rounded-md border border-white/20 bg-[#070b16]/40 px-3 py-2 text-sm"
-            value={customTo}
-            onChange={(e) => setCustomTo(e.target.value)}
-          />
-
-          <div />
+    <section className="vf-card">
+      <div className="vf-card-inner">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-semibold">Periodo</h2>
+            <p className="mt-1 text-sm opacity-75">
+              Afecta a KPIs y resumen por lote (según fecha de venta).
+            </p>
+          </div>
+          <div className="text-sm opacity-70">{mode === "all" ? "Todo" : ""}</div>
         </div>
-      )}
-    </div>
+
+        {/* Mobile-first: wrapped chips so nothing gets cut */}
+        <div className="mt-3">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:gap-2">
+            <Chip label="Todo" value="all" />
+            <Chip label="Este mes" value="month" />
+            <Chip label="Últimos 30 días" value="last30" />
+            <Chip label="Personalizado" value="custom" />
+          </div>
+        </div>
+
+        {mode === "custom" && (
+          <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <input
+              type="date"
+              className="vf-input"
+              value={customFrom}
+              onChange={(e) => setCustomFrom(e.target.value)}
+            />
+            <input
+              type="date"
+              className="vf-input"
+              value={customTo}
+              onChange={(e) => setCustomTo(e.target.value)}
+            />
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
