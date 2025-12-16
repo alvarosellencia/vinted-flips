@@ -31,6 +31,7 @@ export default function Dashboard({ userId }: DashboardProps) {
   const router = useRouter();
   const [view, setView] = useState<View>("summary");
   const [loading, setLoading] = useState(true);
+
   const [lots, setLots] = useState<LotRow[]>([]);
   const [items, setItems] = useState<ItemRow[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -56,16 +57,14 @@ export default function Dashboard({ userId }: DashboardProps) {
     const uid = userId ?? sessionData.session?.user?.id;
 
     if (!uid) {
-      setError(
-        "No se pudo obtener el userId de la sesión. Cierra sesión y vuelve a entrar con el magic link."
-      );
+      setError("No se pudo obtener el userId de la sesión. Cierra sesión y vuelve a entrar con el magic link.");
       setLots([]);
       setItems([]);
       setLoading(false);
       return;
     }
 
-    // IMPORTANT: filtra por user_id (RLS + claridad)
+    // Filtra por user_id (RLS + claridad)
     const lotsRes = await supabase
       .from("lots")
       .select("*")
@@ -100,10 +99,9 @@ export default function Dashboard({ userId }: DashboardProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userId]);
 
+  // KPIs
   const kpis = useMemo(() => {
-    const soldInPeriod = items.filter(
-      (it) => it.status === "sold" && inPeriodBySaleDate(it, from, to)
-    );
+    const soldInPeriod = items.filter((it) => it.status === "sold" && inPeriodBySaleDate(it, from, to));
     const netSoldPeriod = soldInPeriod.reduce((acc, it) => acc + netRevenue(it), 0);
 
     const totalLotsCost = lots.reduce((acc, l) => acc + (l.total_cost ?? 0), 0);
@@ -120,6 +118,7 @@ export default function Dashboard({ userId }: DashboardProps) {
       if (it.status !== "sold" && it.status !== "reserved") return false;
       return inPeriodBySaleDate(it, from, to);
     });
+
     const lotIncomePeriod = lotItemsInPeriod.reduce((acc, it) => acc + netRevenue(it), 0);
     const lotProfit = lotIncomePeriod - totalLotsCost;
 
@@ -137,11 +136,13 @@ export default function Dashboard({ userId }: DashboardProps) {
         const b = new Date(it.sale_date + "T00:00:00").getTime();
         return Math.max(0, (b - a) / (1000 * 60 * 60 * 24));
       });
+
     const avgDaysToSell = days.length ? days.reduce((s, x) => s + x, 0) / days.length : null;
 
     return { totalProfit, lotProfit, soldMargin, avgDaysToSell };
   }, [items, lots, from, to]);
 
+  // Resumen por lote
   const lotsSummary = useMemo(() => {
     return lots.map((lot) => {
       const cost = lot.total_cost ?? 0;
@@ -151,9 +152,7 @@ export default function Dashboard({ userId }: DashboardProps) {
         return resolved?.id === lot.id;
       });
 
-      const soldInPeriod = lotItems.filter(
-        (it) => it.status === "sold" && inPeriodBySaleDate(it, from, to)
-      );
+      const soldInPeriod = lotItems.filter((it) => it.status === "sold" && inPeriodBySaleDate(it, from, to));
       const revenuePeriod = soldInPeriod.reduce((acc, it) => acc + netRevenue(it), 0);
       const soldCountPeriod = soldInPeriod.length;
 
@@ -173,7 +172,7 @@ export default function Dashboard({ userId }: DashboardProps) {
   };
 
   const onAdd = () => {
-    alert("Añadir: lo conectamos luego (modal crear Lote / Prenda)." );
+    alert("Añadir: lo conectamos luego (modal crear Lote / Prenda).");
   };
 
   if (loading) {
@@ -188,12 +187,13 @@ export default function Dashboard({ userId }: DashboardProps) {
 
   return (
     <main className="w-full">
-      <div className="mx-auto max-w-5xl px-4 pb-28 pt-7">
+      <div className="mx-auto max-w-5xl px-4 pt-7 pb-[calc(7rem+env(safe-area-inset-bottom))]">
         <header className="mb-4 flex items-center justify-between">
           <div>
             <div className="text-sm opacity-70">Vinted Flips</div>
             <h1 className="text-2xl font-semibold">Panel (beta)</h1>
           </div>
+
           <button
             onClick={signOut}
             className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-sm hover:bg-white/10"
@@ -223,7 +223,7 @@ export default function Dashboard({ userId }: DashboardProps) {
               <KpiCards kpis={kpis} />
             </div>
 
-            <section className="mt-4 pb-24">
+            <section className="mt-4">
               <h2 className="text-xl font-semibold">Resumen por lote (periodo filtrado)</h2>
 
               <div className="mt-3 space-y-3">
@@ -237,9 +237,8 @@ export default function Dashboard({ userId }: DashboardProps) {
                         <div className="min-w-0">
                           <div className="truncate text-lg font-semibold">{lot.name}</div>
                           <div className="mt-1 text-sm opacity-75">
-                            Coste: {fmtEUR(cost)} · Vendidas (periodo): {soldCountPeriod} · Ingresos (periodo): {fmtEUR(
-                              revenuePeriod
-                            )}
+                            Coste: {fmtEUR(cost)} · Vendidas (periodo): {soldCountPeriod} · Ingresos (periodo):{" "}
+                            {fmtEUR(revenuePeriod)}
                           </div>
 
                           <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
@@ -249,6 +248,7 @@ export default function Dashboard({ userId }: DashboardProps) {
                                 {roiCost == null ? "—" : (roiCost * 100).toFixed(1) + "%"}
                               </div>
                             </div>
+
                             <div className="rounded-2xl border border-white/10 bg-[#070b16]/40 p-3">
                               <div className="opacity-70">ROI vendidas</div>
                               <div className="mt-1 font-semibold">
