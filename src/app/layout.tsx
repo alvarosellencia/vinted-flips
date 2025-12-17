@@ -3,19 +3,15 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Vinted Flips",
-  description: "Panel de control para lotes y prendas",
+  description: "Panel para resellers",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es">
+    <html lang="es" suppressHydrationWarning>
       <body
-        className={[
-          "min-h-screen",
-          // Deja espacio para la bottom nav fija + safe area iOS
-          "pb-[calc(env(safe-area-inset-bottom)+92px)]",
-          "px-3 sm:px-6",
-        ].join(" ")}
+        suppressHydrationWarning
+        className="min-h-screen pb-[calc(env(safe-area-inset-bottom)+92px)] px-3 sm:px-6"
       >
         {children}
       </body>

@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ---------- Base theme (does not fight Tailwind classes) ---------- */
+/* ---------- Base theme ---------- */
 @layer base {
   :root {
     color-scheme: dark;
@@ -13,7 +13,8 @@
 
   body {
     margin: 0;
-    background: radial-gradient(1200px 700px at 15% 10%, rgba(16, 185, 129, 0.12), transparent 55%),
+    background:
+      radial-gradient(1200px 700px at 15% 10%, rgba(16, 185, 129, 0.12), transparent 55%),
       radial-gradient(900px 600px at 85% 15%, rgba(59, 130, 246, 0.10), transparent 55%),
       #070b16;
     color: #e5e7eb;
@@ -21,9 +22,6 @@
       "Apple Color Emoji", "Segoe UI Emoji";
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-
-    /* Deja espacio para la bottom nav en móvil + safe area iPhone */
-    padding-bottom: calc(env(safe-area-inset-bottom) + 88px);
   }
 
   a {
@@ -42,14 +40,14 @@
   }
 }
 
-/* ---------- Opinionated but safe component primitives ---------- */
+/* ---------- Components ---------- */
 @layer components {
   .vf-card {
     @apply rounded-3xl border border-white/10 bg-white/5 shadow-[0_10px_30px_rgba(0,0,0,0.25)];
   }
 
   .vf-card-inner {
-    @apply p-5;
+    @apply p-5 sm:p-6;
   }
 
   .vf-panel {
@@ -62,7 +60,7 @@
   }
 
   .vf-chip {
-    @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm;
+    @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-3 text-sm;
     @apply hover:bg-white/10;
   }
 
@@ -76,29 +74,73 @@
     @apply hover:brightness-95;
   }
 
-  .vf-btn-danger {
-    @apply inline-flex items-center justify-center rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 font-semibold text-rose-200;
-    @apply hover:bg-rose-500/15;
-  }
-
-  /* ---------- Bottom nav (mobile-first, modern, safe-area aware) ---------- */
+  /* Bottom nav */
   .vf-bottomnav {
-    @apply fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#070b16]/80 backdrop-blur-xl;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
     padding-bottom: env(safe-area-inset-bottom);
+    z-index: 50;
+    pointer-events: none;
   }
 
-  .vf-navbtn {
-    @apply flex w-[72px] flex-col items-center justify-center rounded-2xl px-2 py-3;
-    @apply hover:bg-white/5 active:scale-[0.98] transition;
+  .vf-bottomnav-inner {
+    pointer-events: auto;
+    margin: 0 auto;
+    width: min(520px, calc(100% - 24px));
+    background: rgba(7, 11, 22, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-radius: 22px;
+    padding: 10px 12px;
+    display: grid;
+    grid-template-columns: 1fr 1fr auto 1fr 1fr;
+    align-items: center;
+    gap: 6px;
+    box-shadow: 0 18px 45px rgba(0,0,0,0.45);
   }
 
-  .vf-navfab {
-    @apply -mt-5 grid h-14 w-14 place-items-center rounded-2xl bg-emerald-400 text-[#070b16];
-    @apply shadow-[0_12px_30px_rgba(0,0,0,0.35)] hover:brightness-95 active:scale-[0.98] transition;
+  .vf-navitem {
+    @apply rounded-2xl px-3 py-2;
+    display: grid;
+    place-items: center;
+    gap: 6px;
+    transition: transform 120ms ease, background 120ms ease, color 120ms ease;
+  }
+
+  .vf-navitem:hover {
+    background: rgba(255, 255, 255, 0.06);
+  }
+
+  .vf-navitem:active {
+    transform: translateY(1px);
+  }
+
+  .vf-fab {
+    width: 56px;
+    height: 56px;
+    border-radius: 18px;
+    background: rgba(16, 185, 129, 0.92);
+    color: #071016;
+    display: grid;
+    place-items: center;
+    box-shadow: 0 18px 35px rgba(16, 185, 129, 0.20), 0 10px 25px rgba(0,0,0,0.35);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    transition: transform 140ms ease, filter 140ms ease;
+  }
+
+  .vf-fab:hover {
+    filter: brightness(0.98);
+  }
+
+  .vf-fab:active {
+    transform: translateY(1px) scale(0.99);
   }
 }
 
-/* ---------- Minimal defaults for form controls (only when you don't set classes) ---------- */
+/* ---------- Minimal defaults for form controls ---------- */
 @layer base {
   input,
   select,

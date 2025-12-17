@@ -1,40 +1,39 @@
 "use client";
 
-export type PeriodValue = "all" | "month" | "30d" | "custom";
+export type PeriodKey = "all" | "month" | "last30" | "custom";
 
-type Props = {
-  value: PeriodValue;
-  onChange: (v: PeriodValue) => void;
-};
+const options: { key: PeriodKey; label: string }[] = [
+  { key: "all", label: "Todo" },
+  { key: "month", label: "Este mes" },
+  { key: "last30", label: "Últimos 30 días" },
+  { key: "custom", label: "Personalizado" },
+];
 
-const Chip = ({
-  active,
-  label,
-  onClick,
+export default function PeriodChips({
+  value,
+  onChange,
 }: {
-  active: boolean;
-  label: string;
-  onClick: () => void;
-}) => {
+  value: PeriodKey;
+  onChange: (v: PeriodKey) => void;
+}) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`vf-chip justify-center rounded-full px-4 py-3 text-sm transition
-        ${active ? "bg-emerald-400/20 text-emerald-100 border-emerald-400/25" : "text-white/80"}`}
-    >
-      {label}
-    </button>
-  );
-};
-
-export default function PeriodChips({ value, onChange }: Props) {
-  return (
-    <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap sm:gap-3">
-      <Chip active={value === "all"} label="Todo" onClick={() => onChange("all")} />
-      <Chip active={value === "month"} label="Este mes" onClick={() => onChange("month")} />
-      <Chip active={value === "30d"} label="Últimos 30 días" onClick={() => onChange("30d")} />
-      <Chip active={value === "custom"} label="Personalizado" onClick={() => onChange("custom")} />
+    <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
+      {options.map((o) => {
+        const active = o.key === value;
+        return (
+          <button
+            key={o.key}
+            type="button"
+            onClick={() => onChange(o.key)}
+            className={[
+              "vf-chip w-full sm:w-auto justify-center",
+              active ? "bg-emerald-400/15 text-emerald-200 border-emerald-400/25" : "",
+            ].join(" ")}
+          >
+            {o.label}
+          </button>
+        );
+      })}
     </div>
   );
 }

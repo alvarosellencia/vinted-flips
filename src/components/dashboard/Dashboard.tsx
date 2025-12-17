@@ -1,186 +1,107 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import PeriodChips, { PeriodValue } from "@/components/dashboard/PeriodChips";
-import BottomNav, { TabKey } from "@/components/dashboard/BottomNav";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import BottomNav, { NavKey } from "@/components/dashboard/BottomNav";
+import PeriodChips, { PeriodKey } from "@/components/dashboard/PeriodChips";
+import KpiCards from "@/components/dashboard/KpiCards";
+import LotsView from "@/components/dashboard/LotsView";
+import ItemsView from "@/components/dashboard/ItemsView";
 
-type Props = { userId: string };
-
-export default function Dashboard({ userId }: Props) {
-  const [tab, setTab] = useState<TabKey>("resumen");
-  const [period, setPeriod] = useState<PeriodValue>("all");
-  const [loading, setLoading] = useState(false);
+export default function Dashboard({ userId }: { userId: string }) {
+  const [tab, setTab] = useState<NavKey>("summary");
+  const [period, setPeriod] = useState<PeriodKey>("all");
   const [error, setError] = useState<string | null>(null);
 
-  // KPIs / data
-  const [kpiTotal, setKpiTotal] = useState<number>(0);
-  const [kpiLots, setKpiLots] = useState<number>(0);
+  // Trigger simple para refrescar datos en hijos (si lo usas)
+  const [refreshToken, setRefreshToken] = useState(0);
 
-  const periodLabel = useMemo(() => {
-    switch (period) {
-      case "all":
-        return "Todo";
-      case "month":
-        return "Este mes";
-      case "30d":
-        return "Últimos 30 días";
-      case "custom":
-        return "Personalizado";
-      default:
-        return "Todo";
-    }
-  }, [period]);
+  const onNavigate = useCallback((key: NavKey) => {
+    setTab(key);
+  }, []);
 
-  async function loadData() {
-    if (!userId) return; // blindaje
-    setLoading(true);
+  const onAdd = useCallback(() => {
+    // Aquí decides: abrir modal, ir a pantalla, etc.
+    // Si ya tenías modal, enchúfalo aquí.
+    // Por ahora: saltamos a “Prendas” (lo normal en resellers).
+    setTab("items");
+  }, []);
+
+  const onSync = useCallback(() => {
     setError(null);
+    setRefreshToken((x) => x + 1);
+  }, []);
 
-    try {
-      // TODO: aquí metes tus queries reales (items, lots, KPIs, etc.)
-      // IMPORTANTÍSIMO: filtra por userId si tu esquema usa user_id / owner_id
-      //
-      // EJEMPLO (ajusta tablas/columnas):
-      // const { data: items, error: e1 } = await supabase
-      //   .from("items")
-      //   .select("*")
-      //   .eq("user_id", userId);
-      // if (e1) throw e1;
-
-      // DEMO: deja algo visible para confirmar que sí entra a cargar en prod
-      setKpiTotal(0);
-      setKpiLots(0);
-    } catch (e: any) {
-      console.error("[Dashboard] loadData error:", e);
-      setError(e?.message ?? "Error cargando datos");
-    } finally {
-      setLoading(false);
-    }
-  }
-
+  // Opcional: limpiar errores cuando cambias tab
   useEffect(() => {
-    loadData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, period]);
-
-  const logout = async () => {
     setError(null);
-    const { error } = await supabase.auth.signOut();
-    if (error) setError(error.message);
-  };
+  }, [tab]);
+
+  const headerSubtitle = useMemo(() => {
+    switch (tab) {
+      case "summary":
+        return "KPIs y resumen por lote.";
+      case "lots":
+        return "Gestiona tus lotes.";
+      case "items":
+        return "Gestiona tus prendas.";
+      default:
+        return "";
+    }
+  }, [tab]);
 
   return (
-    <main className="mx-auto w-full max-w-5xl px-4 pb-28 pt-6">
-      <header className="flex items-start justify-between gap-4">
-        <div>
-          <div className="text-sm opacity-80">Vinted Flips</div>
-          <h1 className="text-3xl font-semibold tracking-tight">Panel (beta)</h1>
-        </div>
-
-        <button
-          type="button"
-          onClick={logout}
-          className="vf-btn"
-          aria-label="Cerrar sesión"
-        >
-          Cerrar sesión
-        </button>
-      </header>
-
-      {error && (
-        <div className="mt-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-100">
-          {error}
-        </div>
-      )}
-
-      {/* Periodo */}
-      <section className="vf-card mt-5">
-        <div className="vf-card-inner">
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xl font-semibold">Periodo</div>
-              <div className="mt-1 text-sm opacity-75">
-                Afecta a KPIs y resumen por lote (según fecha de venta).
-              </div>
-            </div>
-            <div className="text-sm opacity-70">{periodLabel}</div>
+    <main className="mx-auto w-full max-w-6xl">
+      <div className="pt-6 sm:pt-10">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-sm opacity-70">Vinted Flips</div>
+            <h1 className="text-4xl font-semibold tracking-tight">Panel (beta)</h1>
           </div>
 
-          <div className="mt-4">
-            <PeriodChips value={period} onChange={setPeriod} />
+          <div className="flex items-center gap-2">
+            {/* Si ya tienes botón real de logout en otro componente, úsalo */}
+            <button className="vf-btn">Cerrar sesión</button>
           </div>
         </div>
-      </section>
 
-      {/* KPIs básicos (ejemplo) */}
-      {tab === "resumen" && (
-        <section className="mt-5 grid gap-4 md:grid-cols-2">
-          <div className="vf-card">
-            <div className="vf-card-inner">
-              <div className="text-sm opacity-70">Beneficio total</div>
-              <div className="mt-2 text-4xl font-semibold text-emerald-300">
-                {kpiTotal.toFixed(2).replace(".", ",")} €
-              </div>
-              <div className="mt-2 text-sm opacity-75">
-                Ingresos netos (vendidas, periodo) − (coste total lotes + coste prendas sueltas).
-              </div>
-            </div>
+        {error && (
+          <div className="mt-4 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-4 py-3 text-sm text-rose-200">
+            {error}
           </div>
+        )}
 
-          <div className="vf-card">
-            <div className="vf-card-inner">
-              <div className="text-sm opacity-70">Beneficio sobre lotes</div>
-              <div className="mt-2 text-4xl font-semibold text-emerald-300">
-                {kpiLots.toFixed(2).replace(".", ",")} €
-              </div>
-              <div className="mt-2 text-sm opacity-75">
-                Ingresos netos (vendidas+reservadas con lote, periodo) − coste total lotes.
-              </div>
-            </div>
-          </div>
-
-          <div className="vf-card md:col-span-2">
-            <div className="vf-card-inner flex items-center justify-between gap-3">
-              <div className="text-sm opacity-75">
-                {loading ? "Cargando datos…" : "Datos listos."}
-              </div>
-              <button type="button" className="vf-btn" onClick={loadData}>
-                Refrescar
-              </button>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {/* Tabs placeholders */}
-      {tab === "lotes" && (
-        <section className="vf-card mt-5">
+        <section className="vf-card mt-6">
           <div className="vf-card-inner">
-            <div className="text-lg font-semibold">Lotes</div>
-            <div className="mt-2 text-sm opacity-75">Aquí va tu vista de lotes.</div>
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <div className="text-lg font-semibold">Periodo</div>
+                <div className="mt-1 text-sm opacity-70">{headerSubtitle}</div>
+              </div>
+              <div className="text-sm opacity-70">{period === "all" ? "Todo" : ""}</div>
+            </div>
+
+            <div className="mt-4">
+              <PeriodChips value={period} onChange={setPeriod} />
+            </div>
           </div>
         </section>
-      )}
 
-      {tab === "prendas" && (
-        <section className="vf-card mt-5">
-          <div className="vf-card-inner">
-            <div className="text-lg font-semibold">Prendas</div>
-            <div className="mt-2 text-sm opacity-75">Aquí va tu vista de prendas.</div>
-          </div>
-        </section>
-      )}
+        <div className="mt-6">
+          {tab === "summary" && (
+            <KpiCards userId={userId} period={period} refreshToken={refreshToken} />
+          )}
 
-      <BottomNav
-        active={tab}
-        onChange={setTab}
-        onAdd={() => {
-          // TODO: abre modal / create flow
-          console.log("[BottomNav] add");
-        }}
-        onSync={loadData}
-      />
+          {tab === "lots" && (
+            <LotsView userId={userId} period={period} refreshToken={refreshToken} />
+          )}
+
+          {tab === "items" && (
+            <ItemsView userId={userId} period={period} refreshToken={refreshToken} />
+          )}
+        </div>
+      </div>
+
+      <BottomNav active={tab} onNavigate={onNavigate} onAdd={onAdd} onSync={onSync} />
     </main>
   );
 }
