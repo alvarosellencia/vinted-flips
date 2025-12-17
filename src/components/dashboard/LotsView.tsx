@@ -1,33 +1,38 @@
-// src/components/dashboard/LotsView.tsx
 "use client";
 
-import type { ItemRow, LotRow } from "../../lib/types";
-import { fmtEUR } from "../../lib/metrics";
+type LotRow = Record<string, any>;
 
-export default function LotsView({ lots, items }: { lots: LotRow[]; items: ItemRow[] }) {
+export default function LotsView({
+  lots,
+}: {
+  lots: LotRow[];
+}) {
   return (
-    <section className="mt-4 rounded-3xl border border-white/10 bg-white/5 p-5">
-      <h2 className="text-xl font-semibold">Lotes</h2>
+    <section className="mt-6">
+      <div className="vf-card">
+        <div className="vf-card-inner flex items-center justify-between">
+          <div className="text-lg font-semibold">Lotes</div>
+          <div className="text-sm opacity-70">{lots.length}</div>
+        </div>
+      </div>
 
-      <div className="mt-3 space-y-2">
-        {lots.map((l) => {
-          const count = items.filter((it) => it.lot_id === l.id || it.lot_name === l.name).length;
-          return (
-            <div key={l.id} className="rounded-2xl border border-white/10 bg-[#070b16]/40 p-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <div className="truncate font-semibold">{l.name}</div>
-                  <div className="mt-1 text-sm opacity-75">
-                    Coste total: {fmtEUR(l.total_cost ?? 0)} · Unitario: {fmtEUR(l.unit_cost ?? 0)} · Prendas: {count}
+      <div className="mt-4 vf-card">
+        <div className="vf-card-inner">
+          {lots.length === 0 ? (
+            <div className="text-sm opacity-70">No hay lotes aún.</div>
+          ) : (
+            <div className="space-y-3">
+              {lots.map((l, idx) => (
+                <div key={l.id ?? idx} className="vf-panel p-4">
+                  <div className="font-semibold">{l.name ?? l.title ?? `Lote ${idx + 1}`}</div>
+                  <div className="text-sm opacity-70 mt-1">
+                    {l.created_at ? `Creado: ${String(l.created_at).slice(0, 10)}` : ""}
                   </div>
                 </div>
-                <div className="shrink-0 text-sm opacity-70">{l.purchase_date ?? "—"}</div>
-              </div>
+              ))}
             </div>
-          );
-        })}
-
-        {lots.length === 0 && <div className="opacity-75">No hay lotes.</div>}
+          )}
+        </div>
       </div>
     </section>
   );

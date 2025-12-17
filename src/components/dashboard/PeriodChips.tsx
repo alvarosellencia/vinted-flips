@@ -2,38 +2,52 @@
 
 export type PeriodKey = "all" | "month" | "last30" | "custom";
 
-const options: { key: PeriodKey; label: string }[] = [
-  { key: "all", label: "Todo" },
-  { key: "month", label: "Este mes" },
-  { key: "last30", label: "Últimos 30 días" },
-  { key: "custom", label: "Personalizado" },
-];
-
 export default function PeriodChips({
-  value,
+  period,
   onChange,
 }: {
-  value: PeriodKey;
-  onChange: (v: PeriodKey) => void;
+  period: PeriodKey;
+  onChange: (p: PeriodKey) => void;
 }) {
+  const chip = (key: PeriodKey, label: string) => {
+    const active = period === key;
+    return (
+      <button
+        type="button"
+        onClick={() => onChange(key)}
+        className={[
+          "vf-chip",
+          "justify-center",
+          "min-h-[44px]",
+          "w-full",
+          active ? "bg-emerald-400/20 text-emerald-200 border-emerald-300/20" : "",
+        ].join(" ")}
+      >
+        {label}
+      </button>
+    );
+  };
+
   return (
-    <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
-      {options.map((o) => {
-        const active = o.key === value;
-        return (
-          <button
-            key={o.key}
-            type="button"
-            onClick={() => onChange(o.key)}
-            className={[
-              "vf-chip w-full sm:w-auto justify-center",
-              active ? "bg-emerald-400/15 text-emerald-200 border-emerald-400/25" : "",
-            ].join(" ")}
-          >
-            {o.label}
-          </button>
-        );
-      })}
+    <div className="vf-card mt-4">
+      <div className="vf-card-inner">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <div className="text-lg font-semibold">Periodo</div>
+            <div className="mt-1 text-sm opacity-70">
+              Afecta a KPIs y resumen por lote (según fecha de venta).
+            </div>
+          </div>
+          <div className="text-sm opacity-70">Todo</div>
+        </div>
+
+        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {chip("all", "Todo")}
+          {chip("month", "Este mes")}
+          {chip("last30", "Últimos 30 días")}
+          {chip("custom", "Personalizado")}
+        </div>
+      </div>
     </div>
   );
 }
