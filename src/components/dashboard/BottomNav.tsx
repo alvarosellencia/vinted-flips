@@ -2,111 +2,114 @@
 
 import React from "react";
 
-type TabKey = "summary" | "lots" | "items";
+export type TabKey = "resumen" | "lotes" | "prendas";
 
-function Icon({ name }: { name: "home" | "box" | "tag" | "refresh" | "plus" }) {
-  switch (name) {
-    case "home":
-      return (
-        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 10.5 12 3l9 7.5" />
-          <path d="M5 10v10h14V10" />
-        </svg>
-      );
-    case "box":
-      return (
-        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 8l-9-5-9 5 9 5 9-5Z" />
-          <path d="M3 8v10l9 5 9-5V8" />
-          <path d="M12 13v10" />
-        </svg>
-      );
-    case "tag":
-      return (
-        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M20.59 13.41 11 3H4v7l9.59 9.59a2 2 0 0 0 2.82 0l4.18-4.18a2 2 0 0 0 0-2.82Z" />
-          <path d="M7 7h.01" />
-        </svg>
-      );
-    case "refresh":
-      return (
-        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M21 12a9 9 0 1 1-2.64-6.36" />
-          <path d="M21 3v6h-6" />
-        </svg>
-      );
-    case "plus":
-      return (
-        <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 5v14" />
-          <path d="M5 12h14" />
-        </svg>
-      );
-  }
+type Props = {
+  active: TabKey;
+  onChange: (t: TabKey) => void;
+  onAdd: () => void;
+  onSync: () => void;
+};
+
+function IconHome(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
+      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        d="M3 10.5 12 3l9 7.5V21a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1v-10.5z" />
+    </svg>
+  );
+}
+function IconBox(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
+      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        d="M21 8.5 12 3 3 8.5 12 14l9-5.5z" />
+      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        d="M3 8.5V16l9 5 9-5V8.5" />
+      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        d="M12 14v7" />
+    </svg>
+  );
+}
+function IconTag(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
+      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        d="M20.5 13.5 13.5 20.5a2 2 0 0 1-2.8 0L3 12.8V3h9.8l7.7 7.7a2 2 0 0 1 0 2.8z" />
+      <circle cx="7.5" cy="7.5" r="1.2" fill="currentColor" />
+    </svg>
+  );
+}
+function IconRefresh(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" {...props}>
+      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        d="M20 12a8 8 0 1 1-2.34-5.66" />
+      <path strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+        d="M20 4v6h-6" />
+    </svg>
+  );
 }
 
-export default function BottomNav(props: any) {
-  // Lectura compatible con varios nombres (para que no rompa aunque tu Dashboard use otra firma)
-  const active: TabKey = (props.active ?? props.tab ?? props.view ?? "summary") as TabKey;
-
-  const setActive = (next: TabKey) => {
-    if (typeof props.setActive === "function") return props.setActive(next);
-    if (typeof props.setTab === "function") return props.setTab(next);
-    if (typeof props.setView === "function") return props.setView(next);
-    if (typeof props.onTabChange === "function") return props.onTabChange(next);
-  };
-
-  const onAdd = () => {
-    if (typeof props.onAdd === "function") return props.onAdd();
-    if (typeof props.onOpenCreate === "function") return props.onOpenCreate();
-  };
-
-  const onRefresh = () => {
-    if (typeof props.onRefresh === "function") return props.onRefresh();
-    if (typeof props.refresh === "function") return props.refresh();
-    if (typeof props.refetch === "function") return props.refetch();
-  };
-
-  const Item = ({
-    label,
-    icon,
-    isActive,
-    onClick,
-  }: {
-    label: string;
-    icon: React.ReactNode;
-    isActive?: boolean;
-    onClick: () => void;
-  }) => (
-    <button
-      type="button"
-      onClick={onClick}
-      className={["vf-navbtn", isActive ? "text-emerald-300" : "text-slate-300/90"].join(" ")}
-      aria-label={label}
-      title={label}
-    >
-      <div className="grid place-items-center">{icon}</div>
-      <div className="mt-1 text-[11px] leading-none opacity-80">{label}</div>
-    </button>
-  );
+export default function BottomNav({ active, onChange, onAdd, onSync }: Props) {
+  const itemBase =
+    "flex flex-col items-center justify-center gap-1 px-3 py-2 text-xs";
+  const itemOn = "text-emerald-300";
+  const itemOff = "text-white/55 hover:text-white/80";
 
   return (
-    <nav className="vf-bottomnav" role="navigation" aria-label="Navegación inferior">
-      <div className="mx-auto flex max-w-3xl items-stretch justify-between gap-2 px-3">
-        <Item label="Resumen" icon={<Icon name="home" />} isActive={active === "summary"} onClick={() => setActive("summary")} />
-        <Item label="Lotes" icon={<Icon name="box" />} isActive={active === "lots"} onClick={() => setActive("lots")} />
-
-        <button type="button" onClick={onAdd} className="vf-navfab" aria-label="Añadir" title="Añadir">
-          <Icon name="plus" />
+    <nav
+      className="fixed bottom-3 left-1/2 z-50 w-[min(520px,calc(100%-24px))] -translate-x-1/2"
+      style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+    >
+      <div className="vf-card flex items-center justify-between px-2 py-2">
+        <button
+          type="button"
+          onClick={() => onChange("resumen")}
+          className={`${itemBase} ${active === "resumen" ? itemOn : itemOff}`}
+          aria-label="Resumen"
+        >
+          <IconHome className="h-6 w-6" />
+          <span>Resumen</span>
         </button>
 
-        <Item label="Prendas" icon={<Icon name="tag" />} isActive={active === "items"} onClick={() => setActive("items")} />
+        <button
+          type="button"
+          onClick={() => onChange("lotes")}
+          className={`${itemBase} ${active === "lotes" ? itemOn : itemOff}`}
+          aria-label="Lotes"
+        >
+          <IconBox className="h-6 w-6" />
+          <span>Lotes</span>
+        </button>
 
-        <button type="button" onClick={onRefresh} className="vf-navbtn text-slate-300/90" aria-label="Refrescar" title="Refrescar">
-          <div className="grid place-items-center">
-            <Icon name="refresh" />
-          </div>
-          <div className="mt-1 text-[11px] leading-none opacity-80">Sync</div>
+        <button
+          type="button"
+          onClick={onAdd}
+          className="mx-1 flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-400 text-[#070b16] shadow-[0_12px_30px_rgba(0,0,0,0.35)]"
+          aria-label="Añadir"
+        >
+          <span className="text-3xl leading-none">+</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onChange("prendas")}
+          className={`${itemBase} ${active === "prendas" ? itemOn : itemOff}`}
+          aria-label="Prendas"
+        >
+          <IconTag className="h-6 w-6" />
+          <span>Prendas</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={onSync}
+          className={`${itemBase} ${itemOff}`}
+          aria-label="Sync"
+        >
+          <IconRefresh className="h-6 w-6" />
+          <span>Sync</span>
         </button>
       </div>
     </nav>

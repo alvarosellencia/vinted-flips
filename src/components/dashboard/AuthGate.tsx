@@ -12,28 +12,26 @@ export default function AuthGate() {
   useEffect(() => {
     let mounted = true;
 
-    const syncUser = async () => {
-      // getUser() is the safest way to ensure we have a real user (and id)
-      const { data, error } = await supabase.auth.getUser();
+    (async () => {
+      const { data, error } = await supabase.auth.getSession();
       if (!mounted) return;
+
       if (error) {
-        // If token/session is invalid, consider as logged out.
+        console.error("[AuthGate] getSession error:", error);
         setUserId(null);
-      } else {
-        setUserId(data.user?.id ?? null);
+        setLoading(false);
+        return;
       }
+
+      const uid = data.session?.user?.id ?? null;
+      setUserId(uid);
       setLoading(false);
-    };
+    })();
 
-    // Initial load
-    syncUser();
-
-    // Keep in sync on login/logout/token refresh
-    const { data: sub } = supabase.auth.onAuthStateChange(() => {
-      // While auth state changes, briefly show loading to avoid rendering
-      // the dashboard with a transient/undefined user.
-      setLoading(true);
-      syncUser();
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!mounted) return;
+      const uid = session?.user?.id ?? null;
+      setUserId(uid);
     });
 
     return () => {
@@ -50,9 +48,7 @@ export default function AuthGate() {
     );
   }
 
-  // If there is no authenticated user, show login
   if (!userId) return <Login />;
 
-  // Important: only render Dashboard once we have a real user id
-  return <Dashboard />;
+  return <Dashboard userId={userId} />;
 }
