@@ -31,6 +31,38 @@ function last30ISO() {
   return d.toISOString();
 }
 
+function downloadText(filename: string, text: string) {
+  const blob = new Blob([text], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function toCSV(rows: Record<string, any>[]) {
+  if (!rows.length) return "";
+  const keys = Array.from(
+    rows.reduce((set, r) => {
+      Object.keys(r ?? {}).forEach((k) => set.add(k));
+      return set;
+    }, new Set<string>())
+  );
+
+  const esc = (v: any) => {
+    const s = v === null || v === undefined ? "" : String(v);
+    const safe = s.replace(/"/g, '""');
+    return `"${safe}"`;
+  };
+
+  const header = keys.map(esc).join(",");
+  const lines = rows.map((r) => keys.map((k) => esc(r?.[k])).join(","));
+  return [header, ...lines].join("\n");
+}
+
 export default function Dashboard({ userId }: { userId: string }) {
   const [tab, setTab] = useState<TabKey>("summary");
   const [period, setPeriod] = useState<PeriodKey>("all");
@@ -42,10 +74,13 @@ export default function Dashboard({ userId }: { userId: string }) {
   const [lots, setLots] = useState<LotRow[]>([]);
   const [items, setItems] = useState<ItemRow[]>([]);
 
+  // Action sheet “+”
+  const [addOpen, setAddOpen] = useState(false);
+
   const dateFrom = useMemo(() => {
     if (period === "month") return startOfMonthISO();
     if (period === "last30") return last30ISO();
-    return null; // all/custom => sin filtro (de momento)
+    return null;
   }, [period]);
 
   useEffect(() => {
@@ -56,24 +91,29 @@ export default function Dashboard({ userId }: { userId: string }) {
       setErrorMsg(null);
 
       try {
-        // OJO: asumo tablas "lots" e "items" con columna user_id.
-        // Si tus tablas se llaman distinto, dime el nombre exacto y lo ajusto.
-        let lotsQ = supabase.from("lots").select("*").eq("user_id", userId).order("created_at", { ascending: false });
-        let itemsQ = supabase.from("items").select("*").eq("user_id", userId).order("created_at", { ascending: false });
+        // Ajusta nombres si tus tablas no son "lots" y "items".
+        let lotsQ = supabase
+          .from("lots")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false });
+
+        let itemsQ = supabase
+          .from("items")
+          .select("*")
+          .eq("user_id", userId)
+          .order("created_at", { ascending: false });
 
         if (dateFrom) {
-          // si filtras por periodo: uso sold_at como referencia típica.
-          // Si tu columna se llama distinto (sale_date / sold_date), lo ajustamos.
+          // Ajusta si tu campo de venta se llama distinto.
           itemsQ = itemsQ.gte("sold_at", dateFrom);
         }
 
         const [lotsRes, itemsRes] = await Promise.all([lotsQ, itemsQ]);
-
         if (lotsRes.error) throw lotsRes.error;
         if (itemsRes.error) throw itemsRes.error;
 
         if (cancelled) return;
-
         setLots(lotsRes.data ?? []);
         setItems(itemsRes.data ?? []);
       } catch (e: any) {
@@ -85,24 +125,23 @@ export default function Dashboard({ userId }: { userId: string }) {
     }
 
     run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    return () => {
+      cancelled = true;
+    };
   }, [userId, dateFrom, refreshToken]);
 
   const kpis: Kpis = useMemo(() => {
-    // Cálculo tolerante: si faltan campos, no revienta.
-    // Ajustaremos a tu esquema real cuando me confirmes columnas exactas.
-    const sold = items.filter((it) => String(it.status ?? "").toLowerCase() === "sold" || !!it.sold_at);
+    const sold = items.filter(
+      (it) => String(it.status ?? "").toLowerCase() === "sold" || !!it.sold_at
+    );
 
     const sum = (arr: any[], field: string) =>
       arr.reduce((acc, x) => acc + (Number(x?.[field]) || 0), 0);
 
-    const net = sum(sold, "net_income"); // recomendado: net_income
-    const cost = sum(sold, "cost"); // recomendado: cost
-
+    const net = sum(sold, "net_income");
+    const cost = sum(sold, "cost");
     const totalProfit = net - cost;
 
-    // beneficio “sobre lotes”: si tienes cost_lot en items o lot_cost prorrateado, lo ajustamos.
-    // por ahora: mismo totalProfit (no invento datos).
     const lotProfit = totalProfit;
 
     const revenue = sum(sold, "revenue") || sum(sold, "sale_price") || 0;
@@ -124,17 +163,25 @@ export default function Dashboard({ userId }: { userId: string }) {
 
   const signOut = async () => {
     await supabase.auth.signOut();
-    // AuthGate se encarga de mostrar login al perder sesión.
   };
 
   const onAdd = () => {
-    // De momento: placeholder. Aquí abriremos modal “añadir prenda/lote”.
-    // No rompo la app: simplemente te lo dejo listo.
-    alert("Añadir (pendiente de implementar modal).");
+    setAddOpen(true);
   };
 
-  const onSync = () => {
-    setRefreshToken((n) => n + 1);
+  const onExport = () => {
+    // Export “pro”: dos CSV separados, con timestamp
+    const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+    const lotsCSV = toCSV(lots);
+    const itemsCSV = toCSV(items);
+
+    if (!lotsCSV && !itemsCSV) {
+      alert("No hay datos para exportar todavía.");
+      return;
+    }
+
+    if (lotsCSV) downloadText(`vinted-flips-lotes-${stamp}.csv`, lotsCSV);
+    if (itemsCSV) downloadText(`vinted-flips-prendas-${stamp}.csv`, itemsCSV);
   };
 
   return (
@@ -168,7 +215,62 @@ export default function Dashboard({ userId }: { userId: string }) {
         </>
       )}
 
-      <BottomNav tab={tab} onNavigate={setTab} onAdd={onAdd} onSync={onSync} />
+      {/* Bottom nav */}
+      <BottomNav tab={tab} onNavigate={setTab} onAdd={onAdd} onExport={onExport} />
+
+      {/* Action Sheet “+” */}
+      {addOpen && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/50 backdrop-blur-sm"
+          onClick={() => setAddOpen(false)}
+        >
+          <div
+            className="absolute inset-x-0 bottom-0 pb-[calc(env(safe-area-inset-bottom)+12px)] px-3"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mx-auto max-w-3xl vf-card">
+              <div className="vf-card-inner">
+                <div className="text-sm opacity-70">Añadir</div>
+                <div className="mt-1 text-lg font-semibold">¿Qué quieres crear?</div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    className="vf-btn-primary"
+                    onClick={() => {
+                      setAddOpen(false);
+                      setTab("items");
+                      alert("Siguiente paso: modal/formulario para crear prenda (lo hacemos después).");
+                    }}
+                  >
+                    Añadir prenda
+                  </button>
+
+                  <button
+                    type="button"
+                    className="vf-btn"
+                    onClick={() => {
+                      setAddOpen(false);
+                      setTab("lots");
+                      alert("Siguiente paso: modal/formulario para crear lote (lo hacemos después).");
+                    }}
+                  >
+                    Añadir lote
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  className="mt-3 vf-btn w-full"
+                  onClick={() => setAddOpen(false)}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
