@@ -1,73 +1,55 @@
 "use client";
 
-import { Home, Boxes, Tag, Plus, Download } from "lucide-react";
+import { Home, Package, Tags, Download, Plus } from "lucide-react";
 
 export type TabKey = "summary" | "lots" | "items";
 
-type Props = {
-  active: TabKey;
-  onNavigate?: (key: TabKey) => void;
-  onCreate?: () => void;
-  onExport?: () => void;
-};
-
-function Item({
-  label,
+export default function BottomNav({
   active,
-  icon,
-  onClick,
+  onNavigate,
+  onAdd,
+  onExport,
 }: {
-  label: string;
-  active: boolean;
-  icon: React.ReactNode;
-  onClick?: () => void;
+  active: TabKey;
+  onNavigate: (tab: TabKey) => void;
+  onAdd: () => void;
+  onExport: () => void;
 }) {
+  const btn = (key: TabKey, label: string, Icon: any) => {
+    const isActive = active === key;
+    return (
+      <button
+        type="button"
+        onClick={() => onNavigate(key)}
+        className={`vf-navbtn ${isActive ? "vf-navbtn-active" : ""}`}
+        aria-current={isActive ? "page" : undefined}
+      >
+        <Icon size={20} />
+        <span className="text-[11px] font-medium">{label}</span>
+      </button>
+    );
+  };
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={["vf-nav-item", active ? "vf-nav-item--active" : ""].join(" ")}
-    >
-      <span className="vf-nav-icon">{icon}</span>
-      <span className="vf-nav-label">{label}</span>
-    </button>
-  );
-}
+    <nav className="vf-bottomnav" role="navigation" aria-label="Navegación inferior">
+      <div className="vf-navgrid">
+        {btn("summary", "Resumen", Home)}
+        {btn("lots", "Lotes", Package)}
 
-export default function BottomNav({ active, onNavigate, onCreate, onExport }: Props) {
-  return (
-    <nav className="vf-bottomnav" aria-label="Bottom navigation">
-      <div className="vf-bottomnav-inner">
-        <Item
-          label="Resumen"
-          active={active === "summary"}
-          icon={<Home size={20} />}
-          onClick={() => onNavigate?.("summary")}
-        />
-
-        <Item
-          label="Lotes"
-          active={active === "lots"}
-          icon={<Boxes size={20} />}
-          onClick={() => onNavigate?.("lots")}
-        />
-
-        <button type="button" onClick={() => onCreate?.()} className="vf-fab" aria-label="Añadir">
-          <Plus size={24} />
+        <button type="button" className="vf-fab" onClick={onAdd} aria-label="Añadir">
+          <Plus size={22} />
         </button>
 
-        <Item
-          label="Prendas"
-          active={active === "items"}
-          icon={<Tag size={20} />}
-          onClick={() => onNavigate?.("items")}
-        />
+        {btn("items", "Prendas", Tags)}
 
-        <button type="button" onClick={() => onExport?.()} className="vf-nav-item" aria-label="Exportar CSV">
-          <span className="vf-nav-icon">
-            <Download size={20} />
-          </span>
-          <span className="vf-nav-label">Export</span>
+        <button
+          type="button"
+          onClick={onExport}
+          className="vf-navbtn"
+          aria-label="Exportar CSV"
+        >
+          <Download size={20} />
+          <span className="text-[11px] font-medium">Export</span>
         </button>
       </div>
     </nav>
