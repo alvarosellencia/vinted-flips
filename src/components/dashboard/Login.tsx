@@ -1,21 +1,17 @@
-// src/components/dashboard/Login.tsx
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
+import { supabase } from "../../lib/supabaseClient";
 
 export default function Login() {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState("alvaro@sellencia.com");
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const signIn = async () => {
     setMsg(null);
     const em = email.trim();
-    if (!em) {
-      setMsg("Introduce un email válido.");
-      return;
-    }
+    if (!em) return;
 
     setBusy(true);
     const { error } = await supabase.auth.signInWithOtp({
@@ -31,33 +27,31 @@ export default function Login() {
   };
 
   return (
-    <main className="mx-auto max-w-xl p-6">
-      <div className="rounded-3xl border border-white/10 bg-white/5 p-6">
-        <h1 className="text-2xl font-semibold">Vinted Flips</h1>
-        <p className="mt-2 text-sm opacity-75">Inicia sesión para ver tus lotes y prendas (RLS activo).</p>
+    <main className="vf-container pt-14">
+      <div className="vf-card max-w-xl">
+        <div className="vf-card-inner">
+          <div className="text-sm vf-muted">Vinted Flips</div>
+          <h1 className="mt-1 text-3xl font-semibold tracking-tight">Acceso</h1>
+          <p className="mt-2 text-sm vf-muted">
+            Inicia sesión para ver tus lotes y prendas (RLS activo).
+          </p>
 
-        <label className="mt-4 block">
-          <span className="mb-1 block text-sm opacity-75">Email</span>
-          <input
-            type="email"
-            inputMode="email"
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-2xl border border-white/10 bg-[#070b16]/60 px-4 py-3 text-slate-100 outline-none focus:ring-2 focus:ring-emerald-400/30"
-            placeholder="tu@email.com"
-          />
-        </label>
+          <label className="mt-5 block">
+            <span className="mb-2 block text-sm vf-muted">Email</span>
+            <input
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="vf-input"
+              placeholder="tu@email.com"
+            />
+          </label>
 
-        <button
-          onClick={signIn}
-          disabled={busy}
-          className="mt-4 w-full rounded-2xl bg-emerald-400 px-4 py-3 font-semibold text-[#070b16] disabled:opacity-60"
-        >
-          {busy ? "Enviando…" : "Enviarme el magic link"}
-        </button>
+          <button onClick={signIn} disabled={busy} className="mt-4 w-full vf-btn-primary">
+            {busy ? "Enviando…" : "Enviarme magic link"}
+          </button>
 
-        {msg && <div className="mt-4 text-sm opacity-80">{msg}</div>}
+          {msg && <div className="mt-4 text-sm vf-muted">{msg}</div>}
+        </div>
       </div>
     </main>
   );

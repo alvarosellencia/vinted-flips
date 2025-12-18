@@ -1,9 +1,30 @@
 @import "tailwindcss";
 
-/* ---------- Base theme ---------- */
+/* =========================================================
+   Vinted Flips — Light Fintech Theme (violet accent)
+   Accent: #7B1DF7
+   ========================================================= */
+
 @layer base {
   :root {
-    color-scheme: dark;
+    color-scheme: light;
+
+    --vf-bg: #f6f4ff;
+    --vf-bg2: #ffffff;
+
+    --vf-text: #0b1020;
+    --vf-muted: rgba(11, 16, 32, 0.62);
+
+    --vf-surface: rgba(255, 255, 255, 0.72);
+    --vf-surface-strong: rgba(255, 255, 255, 0.92);
+    --vf-border: rgba(123, 29, 247, 0.14);
+
+    --vf-accent: #7b1df7;
+    --vf-accent2: #a855f7;
+    --vf-accent-ink: #ffffff;
+
+    --vf-shadow: 0 12px 40px rgba(16, 24, 40, 0.10);
+    --vf-shadow2: 0 18px 60px rgba(123, 29, 247, 0.18);
   }
 
   html,
@@ -11,13 +32,13 @@
     height: 100%;
   }
 
-  body {
+  body.vf-body {
     margin: 0;
     background:
-      radial-gradient(1200px 700px at 15% 10%, rgba(16, 185, 129, 0.12), transparent 55%),
-      radial-gradient(900px 600px at 85% 15%, rgba(59, 130, 246, 0.10), transparent 55%),
-      #070b16;
-    color: #e5e7eb;
+      radial-gradient(900px 600px at 15% 10%, rgba(123, 29, 247, 0.14), transparent 55%),
+      radial-gradient(900px 600px at 85% 18%, rgba(168, 85, 247, 0.10), transparent 55%),
+      linear-gradient(180deg, var(--vf-bg), var(--vf-bg2));
+    color: var(--vf-text);
     font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial,
       "Apple Color Emoji", "Segoe UI Emoji";
     -webkit-font-smoothing: antialiased;
@@ -29,49 +50,95 @@
     text-decoration: none;
   }
 
-  *,
-  *::before,
-  *::after {
+  * {
     box-sizing: border-box;
   }
 
   ::selection {
-    background: rgba(16, 185, 129, 0.25);
+    background: rgba(123, 29, 247, 0.18);
   }
 }
 
-/* ---------- Components ---------- */
 @layer components {
+  /* Page container */
+  .vf-container {
+    @apply mx-auto w-full max-w-6xl px-4;
+  }
+
+  /* Cards */
   .vf-card {
-    @apply rounded-3xl border border-white/10 bg-white/5 shadow-[0_10px_30px_rgba(0,0,0,0.25)];
+    background: var(--vf-surface);
+    border: 1px solid var(--vf-border);
+    border-radius: 28px;
+    box-shadow: var(--vf-shadow);
+    backdrop-filter: blur(14px);
   }
 
   .vf-card-inner {
-    @apply p-5 sm:p-6;
+    @apply p-6;
   }
 
   .vf-panel {
-    @apply rounded-2xl border border-white/10 bg-[#070b16]/50;
+    background: var(--vf-surface-strong);
+    border: 1px solid var(--vf-border);
+    border-radius: 20px;
+    box-shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
   }
 
-  .vf-input {
-    @apply w-full rounded-2xl border border-white/10 bg-[#070b16]/60 px-4 py-3 text-slate-100 outline-none;
-    @apply focus:ring-2 focus:ring-emerald-400/30;
-  }
-
-  .vf-chip {
-    @apply inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-3 text-sm;
-    @apply hover:bg-white/10;
-  }
-
+  /* Buttons */
   .vf-btn {
-    @apply inline-flex items-center justify-center rounded-2xl border border-white/10 bg-white/5 px-4 py-3 font-semibold;
-    @apply hover:bg-white/10;
+    @apply inline-flex items-center justify-center rounded-2xl px-4 py-3 font-semibold transition;
+    background: rgba(255, 255, 255, 0.85);
+    border: 1px solid rgba(11, 16, 32, 0.08);
+    color: var(--vf-text);
+  }
+
+  .vf-btn:hover {
+    filter: brightness(0.98);
   }
 
   .vf-btn-primary {
-    @apply inline-flex items-center justify-center rounded-2xl bg-emerald-400 px-4 py-3 font-semibold text-[#070b16];
-    @apply hover:brightness-95;
+    @apply inline-flex items-center justify-center rounded-2xl px-4 py-3 font-semibold transition;
+    background: linear-gradient(180deg, var(--vf-accent), var(--vf-accent2));
+    color: var(--vf-accent-ink);
+    box-shadow: var(--vf-shadow2);
+  }
+
+  .vf-btn-primary:hover {
+    filter: brightness(0.98);
+  }
+
+  /* Inputs */
+  .vf-input {
+    @apply w-full rounded-2xl px-4 py-3 outline-none transition;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(11, 16, 32, 0.10);
+    color: var(--vf-text);
+    box-shadow: 0 10px 26px rgba(16, 24, 40, 0.06);
+  }
+
+  .vf-input:focus {
+    border-color: rgba(123, 29, 247, 0.35);
+    box-shadow: 0 0 0 6px rgba(123, 29, 247, 0.10);
+  }
+
+  /* Chips */
+  .vf-chip {
+    @apply rounded-2xl px-4 py-3 text-sm transition;
+    border: 1px solid rgba(11, 16, 32, 0.10);
+    background: rgba(255, 255, 255, 0.78);
+    color: rgba(11, 16, 32, 0.76);
+  }
+
+  .vf-chip--active {
+    border-color: rgba(123, 29, 247, 0.30);
+    background: rgba(123, 29, 247, 0.12);
+    color: rgba(123, 29, 247, 1);
+    box-shadow: 0 0 0 6px rgba(123, 29, 247, 0.08);
+  }
+
+  .vf-chip--idle:hover {
+    background: rgba(255, 255, 255, 0.92);
   }
 
   /* Bottom nav */
@@ -82,53 +149,55 @@
     bottom: 0;
     padding-bottom: env(safe-area-inset-bottom);
     z-index: 50;
-    pointer-events: none;
   }
 
   .vf-bottomnav-inner {
-    pointer-events: auto;
-    margin: 0 auto;
-    width: min(520px, calc(100% - 24px));
-    background: rgba(7, 11, 22, 0.55);
-    border: 1px solid rgba(255, 255, 255, 0.10);
-    backdrop-filter: blur(14px);
-    -webkit-backdrop-filter: blur(14px);
-    border-radius: 22px;
-    padding: 10px 12px;
-    display: grid;
-    grid-template-columns: 1fr 1fr auto 1fr 1fr;
-    align-items: center;
-    gap: 6px;
-    box-shadow: 0 18px 45px rgba(0,0,0,0.45);
+    @apply mx-auto flex max-w-xl items-center justify-between gap-2 px-3 py-3;
+    margin: 12px;
+    border-radius: 26px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(11, 16, 32, 0.10);
+    backdrop-filter: blur(18px);
+    box-shadow: 0 16px 44px rgba(16, 24, 40, 0.12);
   }
 
-  .vf-navitem {
-    @apply rounded-2xl px-3 py-2;
-    display: grid;
-    place-items: center;
-    gap: 6px;
-    transition: transform 120ms ease, background 120ms ease, color 120ms ease;
+  .vf-nav-item {
+    @apply relative flex min-w-[64px] flex-col items-center justify-center gap-1 rounded-2xl px-3 py-2 text-xs transition;
+    color: rgba(11, 16, 32, 0.58);
   }
 
-  .vf-navitem:hover {
-    background: rgba(255, 255, 255, 0.06);
+  .vf-nav-item:hover {
+    background: rgba(11, 16, 32, 0.04);
   }
 
-  .vf-navitem:active {
-    transform: translateY(1px);
+  .vf-nav-item--active {
+    color: rgba(123, 29, 247, 1);
+    background: rgba(123, 29, 247, 0.10);
+    box-shadow: 0 0 0 6px rgba(123, 29, 247, 0.07);
   }
 
+  .vf-nav-icon {
+    @apply grid place-items-center;
+  }
+
+  .vf-nav-label {
+    @apply leading-none;
+  }
+
+  /* FAB (+) — moderno, violeta, con glow */
   .vf-fab {
-    width: 56px;
+    @apply grid place-items-center rounded-2xl;
     height: 56px;
-    border-radius: 18px;
-    background: rgba(16, 185, 129, 0.92);
-    color: #071016;
-    display: grid;
-    place-items: center;
-    box-shadow: 0 18px 35px rgba(16, 185, 129, 0.20), 0 10px 25px rgba(0,0,0,0.35);
-    border: 1px solid rgba(255, 255, 255, 0.18);
-    transition: transform 140ms ease, filter 140ms ease;
+    width: 56px;
+
+    color: var(--vf-accent-ink);
+    background: linear-gradient(180deg, var(--vf-accent), var(--vf-accent2));
+    box-shadow:
+      0 18px 50px rgba(123, 29, 247, 0.28),
+      0 0 0 8px rgba(123, 29, 247, 0.10);
+
+    transform: translateY(-10px);
+    transition: transform 120ms ease, filter 120ms ease;
   }
 
   .vf-fab:hover {
@@ -136,30 +205,15 @@
   }
 
   .vf-fab:active {
-    transform: translateY(1px) scale(0.99);
-  }
-}
-
-/* ---------- Minimal defaults for form controls ---------- */
-@layer base {
-  input,
-  select,
-  textarea {
-    background: rgba(255, 255, 255, 0.06);
-    color: #e5e7eb;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-    border-radius: 12px;
-    padding: 10px 12px;
-    outline: none;
+    transform: translateY(-8px) scale(0.98);
   }
 
-  input:focus,
-  select:focus,
-  textarea:focus {
-    border-color: rgba(16, 185, 129, 0.55);
+  /* KPI value */
+  .vf-kpi-value {
+    color: rgba(123, 29, 247, 1);
   }
 
-  button {
-    font: inherit;
+  .vf-muted {
+    color: var(--vf-muted);
   }
 }
