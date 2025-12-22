@@ -1,60 +1,80 @@
-// src/lib/metrics.ts
-import type { ItemRow, LotRow } from "./types";
+import type { Item, Lot } from './types'
+import { itemCost, itemProfitIfSold, normalizeStatus, inRange } from './utils'
 
-export type PeriodMode = "all" | "month" | "last30" | "custom";
+export type PeriodMode = 'all' | 'month' | 'last30' | 'custom'
 
-export function derivePeriod(mode: PeriodMode, customFrom: string, customTo: string) {
-  if (mode === "all") return { from: null as Date | null, to: null as Date | null };
+export type Metrics = {
+  revenue: number
+  profit: number
+  soldCount: number
+  totalCount: number
+  forSaleCount: number
+  reservedCount: number
+  returnedCount: number
+}
 
-  const today = new Date();
-  const to = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+export function computeMetrics(
+  items: Item[],
+  lots: Lot[],
+  opts?: { mode?: PeriodMode; from?: string; to?: string }
+): Metrics {
+  const mode = opts?.mode ?? 'all'
+  const now = new Date()
+  const iso = (d: Date) => d.toISOString().slice(0, 10)
 
-  if (mode === "month") {
-    const from = new Date(today.getFullYear(), today.getMonth(), 1, 0, 0, 0);
-    return { from, to };
+  let from = opts?.from ?? ''
+  let to = opts?.to ?? ''
+
+  if (mode === 'last30') {
+    const d = new Date(now)
+    d.setDate(d.getDate() - 30)
+    from = iso(d)
+    to = iso(now)
+  } else if (mode === 'month') {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1)
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    from = iso(start)
+    to = iso(end)
   }
 
-  if (mode === "last30") {
-    const from = new Date(to.getTime() - 30 * 24 * 60 * 60 * 1000);
-    from.setHours(0, 0, 0, 0);
-    return { from, to };
+  const lotMap = new Map(lots.map((l) => [l.id, l]))
+
+  let revenue = 0
+  let profit = 0
+  let soldCount = 0
+  let totalCount = 0
+  let forSaleCount = 0
+  let reservedCount = 0
+  let returnedCount = 0
+
+  for (const it of items) {
+    // filtro por rango usando: sale_date o publish_date o created_at
+    const dateIso = it.sale_date ?? it.publish_date ?? it.created_at
+    if (!inRange(dateIso, from, to)) continue
+
+    totalCount++
+    const s = normalizeStatus(it.status)
+    if (s === 'for_sale') forSaleCount++
+    if (s === 'reserved') reservedCount++
+    if (s === 'returned') returnedCount++
+
+    if (s === 'sold') {
+      soldCount++
+      const sale = Number(it.sale_price ?? 0)
+      const lot = it.lot_id ? lotMap.get(it.lot_id) : undefined
+      const cost = itemCost(it, lot)
+      revenue += sale
+      profit += itemProfitIfSold(it, cost) ?? 0
+    }
   }
 
-  // custom
-  const f = customFrom ? new Date(customFrom + "T00:00:00") : null;
-  const t = customTo ? new Date(customTo + "T23:59:59") : null;
-  return { from: f, to: t };
-}
-
-export function fmtEUR(n: number) {
-  return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" }).format(n ?? 0);
-}
-
-export function inPeriodBySaleDate(it: ItemRow, from: Date | null, to: Date | null) {
-  if (!from || !to) return true;
-  if (!it.sale_date) return false;
-  const d = new Date(it.sale_date + "T12:00:00");
-  return d >= from && d <= to;
-}
-
-// netRevenue = lo que te queda NETO por prenda (según tu modelo actual)
-export function netRevenue(it: ItemRow) {
-  const sale = it.sale_price ?? 0;
-  const fee = it.platform_fee ?? 0;
-  const ship = it.shipping_cost ?? 0;
-  return sale - fee - ship;
-}
-
-export function resolveLotForItem(it: ItemRow, lots: LotRow[]) {
-  if (it.lot_id) return lots.find((l) => l.id === it.lot_id) ?? null;
-  if (it.lot_name) return lots.find((l) => l.name === it.lot_name) ?? null;
-  return null;
-}
-
-export function resolvedPurchaseCost(it: ItemRow, lots: LotRow[]) {
-  // Si está en lote: usa unit_cost del lote si existe; si no, 0 (para no inventar)
-  const lot = resolveLotForItem(it, lots);
-  if (lot) return lot.unit_cost ?? 0;
-  // Si es prenda suelta: usa purchase_cost
-  return it.purchase_cost ?? 0;
+  return {
+    revenue,
+    profit,
+    soldCount,
+    totalCount,
+    forSaleCount,
+    reservedCount,
+    returnedCount
+  }
 }
