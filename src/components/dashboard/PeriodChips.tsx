@@ -9,42 +9,23 @@ export default function PeriodChips({
   value: PeriodKey;
   onChange: (v: PeriodKey) => void;
 }) {
-  const Chip = ({ k, label }: { k: PeriodKey; label: string }) => (
+  const chip = (key: PeriodKey, label: string) => (
     <button
+      key={key}
       type="button"
-      onClick={() => onChange(k)}
-      className={`vf-chip ${value === k ? "vf-chip-active" : ""}`}
+      className={`vf-chip ${value === key ? "is-active" : ""}`}
+      onClick={() => onChange(key)}
     >
       {label}
     </button>
   );
 
   return (
-    <section className="vf-card">
-      <div className="vf-card-inner">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="text-lg font-semibold">Periodo</div>
-            <div className="vf-subtitle">Afecta a KPIs y resumen (según fecha de venta).</div>
-          </div>
-          <div className="text-sm" style={{ color: "var(--vf-muted)" }}>
-            {value === "all"
-              ? "Todo"
-              : value === "month"
-              ? "Este mes"
-              : value === "30d"
-              ? "Últimos 30 días"
-              : "Personalizado"}
-          </div>
-        </div>
-
-        <div className="mt-4 vf-chip-row">
-          <Chip k="all" label="Todo" />
-          <Chip k="month" label="Este mes" />
-          <Chip k="30d" label="Últimos 30 días" />
-          <Chip k="custom" label="Personalizado" />
-        </div>
-      </div>
-    </section>
+    <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {chip("all", "Todo")}
+      {chip("month", "Este mes")}
+      {chip("30d", "Últimos 30 días")}
+      {chip("custom", "Personalizado")}
+    </div>
   );
 }

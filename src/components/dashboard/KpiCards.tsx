@@ -1,73 +1,77 @@
-"use client";
+'use client'
 
-export type Kpis = {
-  totalProfit: number;
-  lotProfit: number;
-  soldMargin: number | null;
-  avgDaysToSell: number | null;
-};
+import { useEffect, useMemo, useState } from 'react'
+import Card from '@/components/ui/Card'
+import { supabase } from '@/lib/supabase/client'
+import type { Item, Lot } from '@/lib/types'
+import { formatCurrency, itemCost, itemProfitIfSold } from '@/lib/utils'
 
-const EUR = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
+export default function KpiCards() {
+  const [items, setItems] = useState<Item[]>([])
+  const [lots, setLots] = useState<Lot[]>([])
 
-function fmtPct(v: number) {
-  return `${(v * 100).toFixed(1)}%`;
-}
+  async function load() {
+    const { data: userData } = await supabase.auth.getUser()
+    const uid = userData.user?.id
+    if (!uid) return
 
-function Card({
-  title,
-  value,
-  desc,
-}: {
-  title: string;
-  value: React.ReactNode;
-  desc: string;
-}) {
+    const [{ data: lotsData }, { data: itemsData }] = await Promise.all([
+      supabase.from('lots').select('*').eq('user_id', uid),
+      supabase.from('items').select('*').eq('user_id', uid)
+    ])
+
+    setLots((lotsData ?? []) as Lot[])
+    setItems((itemsData ?? []) as Item[])
+  }
+
+  useEffect(() => {
+    load()
+    const handler = () => load()
+    window.addEventListener('vf:data-changed', handler)
+    return () => window.removeEventListener('vf:data-changed', handler)
+  }, [])
+
+  const { revenue, profit, soldCount, totalCount } = useMemo(() => {
+    const lotMap = new Map(lots.map((l) => [l.id, l]))
+
+    let revenue = 0
+    let profit = 0
+    let soldCount = 0
+
+    for (const it of items) {
+      if (it.status === 'vendida') {
+        soldCount++
+        const sale = Number(it.sale_price ?? 0)
+        const cost = itemCost(it, it.lot_id ? lotMap.get(it.lot_id) : undefined)
+        revenue += sale
+        const p = itemProfitIfSold(it, cost) ?? 0
+        profit += p
+      }
+    }
+
+    return { revenue, profit, soldCount, totalCount: items.length }
+  }, [items, lots])
+
   return (
-    <div className="vf-card">
-      <div className="vf-card-inner">
-        <div className="text-sm" style={{ color: "var(--vf-muted)" }}>
-          {title}
+    <div className="grid grid-cols-2 gap-3">
+      <Card>
+        <div className="text-xs text-gray-500">Ingresos</div>
+        <div className="text-lg font-semibold">{formatCurrency(revenue)}</div>
+      </Card>
+      <Card>
+        <div className="text-xs text-gray-500">Beneficio</div>
+        <div className={`text-lg font-semibold ${profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+          {formatCurrency(profit)}
         </div>
-        <div className="mt-2 text-3xl font-semibold">{value}</div>
-        <div className="mt-2 text-sm" style={{ color: "var(--vf-muted)" }}>
-          {desc}
-        </div>
-      </div>
+      </Card>
+      <Card>
+        <div className="text-xs text-gray-500">Vendidas</div>
+        <div className="text-lg font-semibold">{soldCount}</div>
+      </Card>
+      <Card>
+        <div className="text-xs text-gray-500">Total prendas</div>
+        <div className="text-lg font-semibold">{totalCount}</div>
+      </Card>
     </div>
-  );
-}
-
-export default function KpiCards({ kpis }: { kpis: Kpis }) {
-  const total = kpis?.totalProfit ?? 0;
-  const lot = kpis?.lotProfit ?? 0;
-  const margin = kpis?.soldMargin ?? null;
-  const days = kpis?.avgDaysToSell ?? null;
-
-  return (
-    <section className="mt-6 grid gap-4 sm:grid-cols-2">
-      <Card
-        title="Beneficio total"
-        value={<span className={total >= 0 ? "text-emerald-600" : "text-rose-600"}>{EUR.format(total)}</span>}
-        desc="Ventas realizadas (vendidas). Beneficio = sale_price - coste."
-      />
-
-      <Card
-        title="Beneficio sobre lotes"
-        value={<span className={lot >= 0 ? "text-emerald-600" : "text-rose-600"}>{EUR.format(lot)}</span>}
-        desc="Vendidas + reservadas con lote. Beneficio = (sale_price) - total_cost del lote."
-      />
-
-      <Card
-        title="Margen prendas vendidas"
-        value={<span>{margin == null ? "—" : fmtPct(margin)}</span>}
-        desc="Beneficio / ingresos (solo vendidas)."
-      />
-
-      <Card
-        title="Media días para vender"
-        value={<span>{days == null ? "—" : days.toFixed(1)}</span>}
-        desc="listing_date → sale_date (solo vendidas)."
-      />
-    </section>
-  );
+  )
 }

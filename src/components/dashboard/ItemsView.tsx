@@ -1,164 +1,97 @@
-"use client";
+'use client'
 
-import { useMemo, useState } from "react";
-import { Search, Pencil } from "lucide-react";
+import { useEffect, useMemo, useState } from 'react'
+import { supabase } from '@/lib/supabase/client'
+import type { Item, Lot } from '@/lib/types'
+import Card from '@/components/ui/Card'
+import SearchInput from '@/components/ui/SearchInput'
+import Chip from '@/components/ui/Chip'
+import { formatCurrency, itemCost, itemProfitIfSold, itemDisplayName } from '@/lib/utils'
 
-type ItemRow = Record<string, any>;
-type LotRow = Record<string, any>;
+export default function ItemsView() {
+  const [items, setItems] = useState<Item[]>([])
+  const [lots, setLots] = useState<Lot[]>([])
+  const [search, setSearch] = useState('')
 
-const EUR = new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR" });
+  async function load() {
+    const { data: userData } = await supabase.auth.getUser()
+    const uid = userData.user?.id
+    if (!uid) return
 
-function statusLabel(s: any) {
-  const v = String(s ?? "").toLowerCase();
-  if (v === "sold") return "Vendida";
-  if (v === "reserved") return "Reservada";
-  if (v === "returned") return "Devuelta";
-  return "En venta";
-}
+    const [{ data: lotsData }, { data: itemsData }] = await Promise.all([
+      supabase.from('lots').select('*').eq('user_id', uid),
+      supabase.from('items').select('*').eq('user_id', uid).order('created_at', { ascending: false })
+    ])
 
-function StatusPill({ status }: { status: any }) {
-  const v = String(status ?? "").toLowerCase();
-  const base =
-    "inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold ring-1 ring-inset";
-
-  if (v === "sold") {
-    return <span className={`${base} bg-emerald-500/10 text-emerald-700 ring-emerald-500/20`}>Vendida</span>;
+    setLots((lotsData ?? []) as Lot[])
+    setItems((itemsData ?? []) as Item[])
   }
-  if (v === "reserved") {
-    return <span className={`${base} bg-[#B68900]/10 text-[#8A6400] ring-[#B68900]/20`}>Reservada</span>;
-  }
-  if (v === "returned") {
-    return <span className={`${base} bg-rose-500/10 text-rose-700 ring-rose-500/20`}>Devuelta</span>;
-  }
-  return <span className={`${base} bg-[#7B1DF7]/10 text-[#7B1DF7] ring-[#7B1DF7]/20`}>En venta</span>;
-}
 
-export default function ItemsView({
-  items,
-  lots,
-  getUnitCost,
-  onEditItem,
-}: {
-  items: ItemRow[];
-  lots: LotRow[];
-  getUnitCost: (it: ItemRow) => number;
-  onEditItem: (it: ItemRow) => void;
-}) {
-  const [q, setQ] = useState("");
+  useEffect(() => {
+    load()
+    const handler = () => load()
+    window.addEventListener('vf:data-changed', handler)
+    return () => window.removeEventListener('vf:data-changed', handler)
+  }, [])
+
+  const lotMap = useMemo(() => new Map(lots.map((l) => [l.id, l])), [lots])
 
   const filtered = useMemo(() => {
-    const query = q.trim().toLowerCase();
-    if (!query) return items;
-
+    const q = search.trim().toLowerCase()
+    if (!q) return items
     return items.filter((it) => {
-      const name = String(it.name ?? it.title ?? it.brand ?? "");
-      return name.toLowerCase().includes(query);
-    });
-  }, [items, q]);
-
-  const lotsById = useMemo(() => {
-    const m = new Map<string, LotRow>();
-    for (const l of lots) if (l?.id) m.set(String(l.id), l);
-    return m;
-  }, [lots]);
+      const lot = it.lot_id ? lotMap.get(it.lot_id) : undefined
+      const lotName = lot?.name ?? it.lot_name ?? ''
+      const hay = `${itemDisplayName(it)} ${it.status} ${it.size ?? ''} ${lotName} ${it.platform ?? ''} ${it.notes ?? ''}`.toLowerCase()
+      return hay.includes(q)
+    })
+  }, [items, search, lotMap])
 
   return (
-    <section className="mt-6">
-      <div className="vf-card">
-        <div className="vf-card-inner flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <div className="text-lg font-semibold">Prendas</div>
-            <div className="text-sm opacity-70">{filtered.length} / {items.length}</div>
-          </div>
+    <div className="space-y-3">
+      <SearchInput value={search} onChange={setSearch} placeholder="Buscar prendas…" />
 
-          <div className="relative w-full max-w-sm">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 opacity-60" />
-            <input
-              value={q}
-              onChange={(e) => setQ(e.target.value)}
-              className="vf-input pl-9"
-              placeholder="Buscar prenda…"
-            />
-          </div>
-        </div>
-      </div>
+      {filtered.length === 0 && (
+        <div className="text-sm text-gray-500">No hay prendas.</div>
+      )}
 
-      <div className="mt-4 vf-card">
-        <div className="vf-card-inner">
-          {filtered.length === 0 ? (
-            <div className="text-sm opacity-70">No hay prendas que coincidan.</div>
-          ) : (
-            <div className="space-y-3">
-              {filtered.map((it, idx) => {
-                const name = it.name ?? it.title ?? it.brand ?? `Prenda ${idx + 1}`;
+      {filtered.map((it) => {
+        const lot = it.lot_id ? lotMap.get(it.lot_id) : undefined
+        const cost = itemCost(it, lot)
+        const profit = itemProfitIfSold(it, cost)
+        const lotName = lot?.name ?? it.lot_name ?? '—'
 
-                const status = String(it.status ?? "for_sale");
-                const purchase = it.purchase_price != null ? Number(it.purchase_price) : null;
-                const sale = it.sale_price != null ? Number(it.sale_price) : null;
-
-                const unitCost = getUnitCost(it);
-                const isSold = String(status).toLowerCase() === "sold";
-                const profit = isSold && sale != null ? (sale - unitCost) : null;
-
-                const lotName = it.lot_id && lotsById.get(String(it.lot_id))
-                  ? String(lotsById.get(String(it.lot_id))?.name ?? "")
-                  : null;
-
-                return (
-                  <div key={it.id ?? idx} className="vf-panel p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <div className="font-semibold truncate">{name}</div>
-                          <StatusPill status={status} />
-                        </div>
-
-                        <div className="mt-1 text-sm opacity-70">
-                          {it.size ? <>Talla: <span className="font-medium">{String(it.size)}</span></> : null}
-                          {lotName ? <> · Lote: <span className="font-medium">{lotName}</span></> : null}
-                        </div>
-                      </div>
-
-                      <button className="vf-btn" onClick={() => onEditItem(it)} aria-label="Editar prenda">
-                        <Pencil size={18} />
-                      </button>
-                    </div>
-
-                    <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-3">
-                      <div>
-                        <div className="text-xs opacity-60">Coste (unit.)</div>
-                        <div className="font-semibold">{EUR.format(unitCost)}</div>
-                      </div>
-
-                      <div>
-                        <div className="text-xs opacity-60">Compra</div>
-                        <div className="font-semibold">{purchase == null ? "—" : EUR.format(purchase)}</div>
-                      </div>
-
-                      <div>
-                        <div className="text-xs opacity-60">Venta</div>
-                        <div className="font-semibold">{sale == null ? "—" : EUR.format(sale)}</div>
-                      </div>
-
-                      <div>
-                        <div className="text-xs opacity-60">Beneficio</div>
-                        <div className={`font-semibold ${profit == null ? "" : profit >= 0 ? "text-emerald-600" : "text-rose-600"}`}>
-                          {profit == null ? "—" : EUR.format(profit)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-2 text-xs opacity-60">
-                      {it.listing_date ? `Publicación: ${String(it.listing_date).slice(0, 10)}` : ""}
-                      {it.sale_date ? ` · Venta: ${String(it.sale_date).slice(0, 10)}` : ""}
-                    </div>
-                  </div>
-                );
-              })}
+        return (
+          <Card key={it.id}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <div className="font-medium truncate">{itemDisplayName(it)}</div>
+                <div className="text-xs text-gray-500 mt-1">
+                  Talla {it.size ?? '—'} · Lote {lotName}
+                </div>
+              </div>
+              <Chip status={it.status} />
             </div>
-          )}
-        </div>
-      </div>
-    </section>
-  );
+
+            <div className="mt-3 grid grid-cols-3 gap-2 text-xs">
+              <div>
+                <div className="text-gray-500">Coste</div>
+                <div className="font-medium">{formatCurrency(cost)}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Venta</div>
+                <div className="font-medium">{it.sale_price ? formatCurrency(Number(it.sale_price)) : '—'}</div>
+              </div>
+              <div>
+                <div className="text-gray-500">Beneficio</div>
+                <div className={`font-semibold ${profit === null ? 'text-gray-400' : profit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                  {profit === null ? '—' : formatCurrency(profit)}
+                </div>
+              </div>
+            </div>
+          </Card>
+        )
+      })}
+    </div>
+  )
 }
