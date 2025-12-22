@@ -1,7 +1,7 @@
 import './globals.css'
-import AuthGate from '@/components/auth/AuthGate'
-import SidebarNav from '@/components/dashboard/layout/SidebarNav'
-import BottomNav from '@/components/dashboard/layout/BottomNav'
+import AuthGate from '../components/auth/AuthGate'
+import SidebarNav from '../components/dashboard/layout/SidebarNav'
+import BottomNav from '../components/dashboard/layout/BottomNav'
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
