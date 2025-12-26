@@ -1,97 +1,113 @@
 'use client'
 
-import { useMemo } from 'react'
-import { Calendar } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 
 export type DateRange = { from: string; to: string }
 
-type Props = {
+export default function DateFilter({
+  value,
+  onChange,
+}: {
   value: DateRange
-  onChange: (next: DateRange) => void
-}
+  onChange: (v: DateRange) => void
+}) {
+  const [quick, setQuick] = useState<'7d' | '30d' | '90d' | 'all' | 'custom'>('all')
 
-type Preset = { key: '7d' | '30d' | '90d' | 'all'; label: string; days?: number }
+  // Helper: YYYY-MM-DD (input type="date")
+  const toDateInput = (d: Date) => {
+    const yyyy = d.getFullYear()
+    const mm = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    return `${yyyy}-${mm}-${dd}`
+  }
 
-const presets: Preset[] = [
-  { key: '7d', label: '7d', days: 7 },
-  { key: '30d', label: '30d', days: 30 },
-  { key: '90d', label: '90d', days: 90 },
-  { key: 'all', label: 'Todo' },
-]
+  const is7 = quick === '7d'
+  const is30 = quick === '30d'
+  const is90 = quick === '90d'
+  const isAll = quick === 'all'
 
-function isoDate(d: Date) {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
-}
-
-export default function DateFilter({ value, onChange }: Props) {
-  const activePreset = useMemo(() => {
-    if (!value.from && !value.to) return 'all'
-    return null
-  }, [value.from, value.to])
-
-  const chipClass = (active: boolean) =>
-    `px-3 py-2 rounded-full text-sm border transition whitespace-nowrap ${
+  const chip = (active: boolean) =>
+    `px-3 py-1 rounded-full text-sm border transition ${
       active
         ? 'border-[#7B1DF7] text-[#7B1DF7] bg-[#7B1DF7]/5'
         : 'border-gray-200 text-gray-700 hover:bg-gray-50'
     }`
 
-  const inputClass =
-    'w-full min-w-0 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#7B1DF7]/20 focus:border-[#7B1DF7]'
+  // Si el usuario toca fechas manualmente, pasamos a "custom"
+  useEffect(() => {
+    if ((value.from || value.to) && quick !== 'custom') setQuick('custom')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value.from, value.to])
+
+  const applyQuick = (mode: '7d' | '30d' | '90d' | 'all') => {
+    setQuick(mode)
+
+    if (mode === 'all') {
+      onChange({ from: '', to: '' })
+      return
+    }
+
+    const now = new Date()
+    const days = mode === '7d' ? 7 : mode === '30d' ? 30 : 90
+    const from = new Date(now)
+    from.setDate(now.getDate() - days)
+
+    onChange({
+      from: toDateInput(from),
+      to: toDateInput(now),
+    })
+  }
+
+  const rangeLabel = useMemo(() => {
+    if (quick === 'all') return 'Todo'
+    if (quick === '7d') return '7d'
+    if (quick === '30d') return '30d'
+    if (quick === '90d') return '90d'
+    return 'Custom'
+  }, [quick])
 
   return (
-    <div className="w-full min-w-0 max-w-full overflow-x-clip">
-      {/* Presets */}
-      <div className="w-full min-w-0 max-w-full overflow-x-auto [-webkit-overflow-scrolling:touch] pb-1">
-        <div className="flex gap-2 min-w-0">
-          {presets.map((p) => (
-            <button
-              key={p.key}
-              type="button"
-              className={chipClass(activePreset === p.key)}
-              onClick={() => {
-                if (p.key === 'all') {
-                  onChange({ from: '', to: '' })
-                  return
-                }
-                const now = new Date()
-                const to = isoDate(now)
-                const from = isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - (p.days ?? 0)))
-                onChange({ from, to })
-              }}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+    <div className="w-full max-w-full">
+      {/* Quick buttons */}
+      <div className="flex flex-wrap gap-2">
+        <button type="button" className={chip(is7)} onClick={() => applyQuick('7d')}>
+          7d
+        </button>
+        <button type="button" className={chip(is30)} onClick={() => applyQuick('30d')}>
+          30d
+        </button>
+        <button type="button" className={chip(is90)} onClick={() => applyQuick('90d')}>
+          90d
+        </button>
+        <button type="button" className={chip(isAll)} onClick={() => applyQuick('all')}>
+          Todo
+        </button>
+
+        {/* Etiqueta pequeña para debug visual (opcional) */}
+        <span className="ml-auto text-xs text-gray-400 self-center">Filtro: {rangeLabel}</span>
       </div>
 
-      {/* Inputs */}
-      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 w-full min-w-0 max-w-full">
-        <div className="flex items-center gap-2 min-w-0">
-          <Calendar className="h-4 w-4 text-gray-400 shrink-0" />
-          <div className="text-sm text-gray-600 shrink-0">Desde</div>
+      {/* Dates (IMPORTANT: stack in mobile to avoid overflow) */}
+      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 w-full">
+        <label className="flex items-center gap-2 min-w-0">
+          <span className="text-sm text-gray-500 shrink-0">Desde</span>
           <input
-            className={inputClass}
             type="date"
-            value={value.from ?? ''}
+            value={value.from}
             onChange={(e) => onChange({ ...value, from: e.target.value })}
+            className="min-w-0 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B1DF7]/30"
           />
-        </div>
+        </label>
 
-        <div className="flex items-center gap-2 min-w-0">
-          <Calendar className="h-4 w-4 text-gray-400 shrink-0" />
-          <div className="text-sm text-gray-600 shrink-0">Hasta</div>
+        <label className="flex items-center gap-2 min-w-0">
+          <span className="text-sm text-gray-500 shrink-0">Hasta</span>
           <input
-            className={inputClass}
             type="date"
-            value={value.to ?? ''}
+            value={value.to}
             onChange={(e) => onChange({ ...value, to: e.target.value })}
+            className="min-w-0 w-full rounded-xl border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B1DF7]/30"
           />
-        </div>
+        </label>
       </div>
     </div>
   )

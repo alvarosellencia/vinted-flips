@@ -2,63 +2,56 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { Plus, Download } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { Download, LogOut, Plus } from 'lucide-react'
+import { supabase } from '@/lib/supabase/client'
 import AddMenuModal from '@/components/dashboard/modals/AddMenuModal'
 
-type Props = {
-  /** "summary" desactiva export y muestra estilo disabled */
-  context?: 'summary' | 'lots' | 'items' | 'export'
-  showAdd?: boolean
-  showExport?: boolean
-}
+export default function PageActions({ context }: { context?: 'items' | 'lots' | 'export' | 'summary' }) {
+  const router = useRouter()
+  const [openAdd, setOpenAdd] = useState(false)
+  const showExport = context === 'items' || context === 'lots'
 
-export default function PageActions({
-  context = 'summary',
-  showAdd = true,
-  showExport = true
-}: Props) {
-  const [open, setOpen] = useState(false)
-  const exportDisabled = context === 'summary' || context === 'export'
+  async function logout() {
+    await supabase.auth.signOut()
+    router.replace('/auth')
+    router.refresh()
+  }
 
   return (
     <>
-      <div className="flex items-center gap-2">
-        {showExport ? (
-          exportDisabled ? (
-            <button
-              type="button"
-              disabled
-              className="inline-flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-white px-3 py-2 text-sm text-gray-400 shadow-[var(--shadow-xs)]"
-              title="El export CSV solo funciona desde Lotes o Prendas."
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </button>
-          ) : (
-            <Link
-              href="/export"
-              className="inline-flex items-center gap-2 rounded-2xl border border-[var(--border)] bg-white px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 shadow-[var(--shadow-xs)]"
-              title="Exportar CSV"
-            >
-              <Download className="h-4 w-4" />
-              Export
-            </Link>
-          )
-        ) : null}
-
-        {showAdd ? (
-          <button
-            onClick={() => setOpen(true)}
-            className="inline-flex items-center gap-2 rounded-2xl bg-[var(--primary)] px-3 py-2 text-sm font-medium text-white shadow-[var(--shadow-sm)] active:scale-[0.99]"
-            title="Añadir"
+      <div className="flex items-center gap-2 flex-wrap justify-end">
+        {showExport && (
+          <Link
+            href="/export"
+            className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50"
           >
-            <Plus className="h-4 w-4" />
-            Añadir
-          </button>
-        ) : null}
+            <Download className="h-4 w-4" />
+            Export
+          </Link>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setOpenAdd(true)}
+          className="inline-flex items-center gap-2 rounded-xl bg-[#7B1DF7] px-3 py-2 text-sm font-medium text-white shadow-sm"
+        >
+          <Plus className="h-4 w-4" />
+          Añadir
+        </button>
+
+        <button
+          type="button"
+          onClick={logout}
+          className="inline-flex items-center gap-2 rounded-xl border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50"
+          aria-label="Cerrar sesión"
+        >
+          <LogOut className="h-4 w-4" />
+          Salir
+        </button>
       </div>
 
-      {open && <AddMenuModal onClose={() => setOpen(false)} />}
+      {openAdd && <AddMenuModal onClose={() => setOpenAdd(false)} />}
     </>
   )
 }
