@@ -5,8 +5,9 @@ import PageActions from '@/components/layout/PageActions'
 export default function Page() {
   return (
     <PageShell>
-      <PageHeader title="Export" subtitle="Descarga tus datos en CSV." />
+      <PageHeader title="Export" description="Descarga tus datos en CSV." />
       <PageActions />
+
       <PageSection>
         <ExportPage />
       </PageSection>
