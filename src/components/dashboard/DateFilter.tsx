@@ -3,76 +3,95 @@
 import { useMemo } from 'react'
 import { Calendar } from 'lucide-react'
 
-export type DateRange = { from: string; to: string } // yyyy-mm-dd (o '')
+export type DateRange = { from: string; to: string }
 
-export default function DateFilter({
-  value,
-  onChange
-}: {
+type Props = {
   value: DateRange
-  onChange: (v: DateRange) => void
-}) {
-  const presets = useMemo(() => {
-    const today = new Date()
-    const iso = (d: Date) => d.toISOString().slice(0, 10)
+  onChange: (next: DateRange) => void
+}
 
-    const minusDays = (n: number) => {
-      const d = new Date()
-      d.setDate(d.getDate() - n)
-      return d
-    }
+type Preset = { key: '7d' | '30d' | '90d' | 'all'; label: string; days?: number }
 
-    return [
-      { label: '7d', from: iso(minusDays(7)), to: iso(today) },
-      { label: '30d', from: iso(minusDays(30)), to: iso(today) },
-      { label: '90d', from: iso(minusDays(90)), to: iso(today) },
-      { label: 'Todo', from: '', to: '' }
-    ]
-  }, [])
+const presets: Preset[] = [
+  { key: '7d', label: '7d', days: 7 },
+  { key: '30d', label: '30d', days: 30 },
+  { key: '90d', label: '90d', days: 90 },
+  { key: 'all', label: 'Todo' },
+]
 
-  const chip = (active: boolean) =>
-    `px-2 py-1 rounded-full text-xs border ${
-      active ? 'border-[#7B1DF7] text-[#7B1DF7] bg-[#7B1DF7]/5' : 'border-gray-200 text-gray-600'
+function isoDate(d: Date) {
+  const y = d.getFullYear()
+  const m = String(d.getMonth() + 1).padStart(2, '0')
+  const day = String(d.getDate()).padStart(2, '0')
+  return `${y}-${m}-${day}`
+}
+
+export default function DateFilter({ value, onChange }: Props) {
+  const activePreset = useMemo(() => {
+    if (!value.from && !value.to) return 'all'
+    return null
+  }, [value.from, value.to])
+
+  const chipClass = (active: boolean) =>
+    `px-3 py-2 rounded-full text-sm border transition whitespace-nowrap ${
+      active
+        ? 'border-[#7B1DF7] text-[#7B1DF7] bg-[#7B1DF7]/5'
+        : 'border-gray-200 text-gray-700 hover:bg-gray-50'
     }`
 
+  const inputClass =
+    'w-full min-w-0 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-[#7B1DF7]/20 focus:border-[#7B1DF7]'
+
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex gap-2 flex-wrap">
-        {presets.map((p) => {
-          const active = value.from === p.from && value.to === p.to
-          return (
+    <div className="w-full min-w-0 max-w-full overflow-x-clip">
+      {/* Presets */}
+      <div className="w-full min-w-0 max-w-full overflow-x-auto [-webkit-overflow-scrolling:touch] pb-1">
+        <div className="flex gap-2 min-w-0">
+          {presets.map((p) => (
             <button
-              key={p.label}
-              onClick={() => onChange({ from: p.from, to: p.to })}
-              className={chip(active)}
+              key={p.key}
+              type="button"
+              className={chipClass(activePreset === p.key)}
+              onClick={() => {
+                if (p.key === 'all') {
+                  onChange({ from: '', to: '' })
+                  return
+                }
+                const now = new Date()
+                const to = isoDate(now)
+                const from = isoDate(new Date(now.getFullYear(), now.getMonth(), now.getDate() - (p.days ?? 0)))
+                onChange({ from, to })
+              }}
             >
               {p.label}
             </button>
-          )
-        })}
+          ))}
+        </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
-        <label className="text-xs text-gray-500 flex items-center gap-2">
-          <Calendar className="h-4 w-4" />
-          Desde
+      {/* Inputs */}
+      <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 w-full min-w-0 max-w-full">
+        <div className="flex items-center gap-2 min-w-0">
+          <Calendar className="h-4 w-4 text-gray-400 shrink-0" />
+          <div className="text-sm text-gray-600 shrink-0">Desde</div>
           <input
+            className={inputClass}
             type="date"
-            value={value.from}
+            value={value.from ?? ''}
             onChange={(e) => onChange({ ...value, from: e.target.value })}
-            className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm"
           />
-        </label>
-        <label className="text-xs text-gray-500 flex items-center gap-2">
-          <Calendar className="h-4 w-4" />
-          Hasta
+        </div>
+
+        <div className="flex items-center gap-2 min-w-0">
+          <Calendar className="h-4 w-4 text-gray-400 shrink-0" />
+          <div className="text-sm text-gray-600 shrink-0">Hasta</div>
           <input
+            className={inputClass}
             type="date"
-            value={value.to}
+            value={value.to ?? ''}
             onChange={(e) => onChange({ ...value, to: e.target.value })}
-            className="mt-1 w-full border border-gray-200 rounded-xl px-3 py-2 text-sm"
           />
-        </label>
+        </div>
       </div>
     </div>
   )

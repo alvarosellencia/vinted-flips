@@ -1,21 +1,19 @@
 import type { ReactNode } from 'react'
 
-export function EmptyState({
+export default function EmptyState({
   title,
   description,
-  action
+  action,
 }: {
   title: string
   description?: string
   action?: ReactNode
 }) {
   return (
-    <div className="rounded-2xl border border-dashed border-[var(--border)] bg-white px-5 py-10 text-center shadow-[var(--shadow-xs)]">
+    <div className="w-full rounded-3xl border border-dashed border-gray-200 bg-white p-8 text-center">
       <div className="mx-auto max-w-md">
-        <div className="text-base font-semibold text-[var(--fg)]">{title}</div>
-        {description ? (
-          <div className="mt-2 text-sm text-[var(--muted)]">{description}</div>
-        ) : null}
+        <div className="text-base font-semibold text-gray-900">{title}</div>
+        {description ? <div className="mt-2 text-sm text-gray-600">{description}</div> : null}
         {action ? <div className="mt-5 flex justify-center">{action}</div> : null}
       </div>
     </div>
