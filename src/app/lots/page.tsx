@@ -7,9 +7,10 @@ export default function Page() {
     <PageShell>
       <PageHeader
         title="Lotes"
-        subtitle="Gestiona compras por lote, coste total, coste unitario y proveedor."
-        right={<PageActions context="lots" />}
+        description="Gestiona compras por lote, coste total, coste unitario y proveedor."
+        actions={<PageActions context="lots" />}
       />
+
       <PageSection>
         <LotsView />
       </PageSection>

@@ -1,8 +1,26 @@
+'use client'
+
 import type { ReactNode } from 'react'
+
+type PageHeaderProps = {
+  title: string
+
+  /** Nuevo nombre (preferido) */
+  description?: string
+  /** Nombre legacy (compatibilidad) */
+  subtitle?: string
+
+  /** Nuevo nombre (preferido) */
+  actions?: ReactNode
+  /** Nombre legacy (compatibilidad) */
+  right?: ReactNode
+
+  className?: string
+}
 
 export function PageShell({ children }: { children: ReactNode }) {
   return (
-    <div className="w-full min-w-0 max-w-full overflow-x-clip">
+    <div className="mx-auto w-full max-w-[1100px] px-4 sm:px-6 lg:px-8">
       {children}
     </div>
   )
@@ -11,51 +29,28 @@ export function PageShell({ children }: { children: ReactNode }) {
 export function PageHeader({
   title,
   description,
+  subtitle,
   actions,
-}: {
-  title: string
-  description?: string
-  actions?: ReactNode
-}) {
-  return (
-    <div className="w-full min-w-0 max-w-full overflow-x-clip">
-      <div className="flex min-w-0 flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
-            {title}
-          </h1>
-          {description ? (
-            <p className="mt-1 text-sm text-gray-600">{description}</p>
-          ) : null}
-        </div>
+  right,
+  className = '',
+}: PageHeaderProps) {
+  const finalDescription = description ?? subtitle
+  const finalActions = actions ?? right
 
-        {actions ? <div className="shrink-0">{actions}</div> : null}
+  return (
+    <div className={`flex items-start justify-between gap-4 ${className}`}>
+      <div className="min-w-0">
+        <h1 className="text-xl sm:text-2xl font-semibold tracking-tight">{title}</h1>
+        {finalDescription ? (
+          <p className="mt-1 text-sm text-gray-500 leading-relaxed">{finalDescription}</p>
+        ) : null}
       </div>
+
+      {finalActions ? <div className="shrink-0">{finalActions}</div> : null}
     </div>
   )
 }
 
-export function PageSection({
-  title,
-  subtitle,
-  children,
-}: {
-  title?: string
-  subtitle?: string
-  children: ReactNode
-}) {
-  return (
-    <section className="w-full min-w-0 max-w-full overflow-x-clip">
-      {title ? (
-        <div className="mb-3">
-          <div className="text-sm font-medium text-gray-900">{title}</div>
-          {subtitle ? (
-            <div className="mt-0.5 text-xs text-gray-500">{subtitle}</div>
-          ) : null}
-        </div>
-      ) : null}
-
-      {children}
-    </section>
-  )
+export function PageSection({ children }: { children: ReactNode }) {
+  return <div className="mt-6">{children}</div>
 }

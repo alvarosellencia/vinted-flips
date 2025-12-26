@@ -7,9 +7,10 @@ export default function Page() {
     <PageShell>
       <PageHeader
         title="Prendas"
-        subtitle="Inventario, estados, costes, ventas y beneficio."
-        right={<PageActions context="items" />}
+        description="Inventario, estados, costes, ventas y beneficio."
+        actions={<PageActions context="items" />}
       />
+
       <PageSection>
         <ItemsView />
       </PageSection>
