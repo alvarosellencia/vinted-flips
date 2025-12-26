@@ -5,11 +5,8 @@ import PageActions from '@/components/layout/PageActions'
 export default function Page() {
   return (
     <PageShell>
-      <PageHeader
-        title="Export"
-        subtitle="Exporta CSV desde la pestaña actual (Lotes o Prendas)."
-        right={<PageActions context="export" showAdd={false} />}
-      />
+      <PageHeader title="Export" subtitle="Descarga tus datos en CSV." />
+      <PageActions />
       <PageSection>
         <ExportPage />
       </PageSection>
