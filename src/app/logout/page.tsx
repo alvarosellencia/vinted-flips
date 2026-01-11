@@ -1,18 +1,28 @@
-'use client'
+'use client';
 
-import { useEffect } from 'react'
-import { useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabase/client'
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient } from '@/lib/supabase/client'; // 1. Importamos la función, no la variable
 
 export default function LogoutPage() {
-  const router = useRouter()
+  const router = useRouter();
 
   useEffect(() => {
-    ;(async () => {
-      await supabase.auth.signOut()
-      router.replace('/auth')
-    })()
-  }, [router])
+    // 2. Instanciamos el cliente dentro del efecto
+    const supabase = createClient();
+    
+    const signOut = async () => {
+      await supabase.auth.signOut();
+      router.replace('/login');
+      router.refresh();
+    };
 
-  return <div className="p-6 text-sm text-gray-500">Cerrando sesión…</div>
+    signOut();
+  }, [router]);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="text-slate-500 animate-pulse">Cerrando sesión...</div>
+    </div>
+  );
 }
