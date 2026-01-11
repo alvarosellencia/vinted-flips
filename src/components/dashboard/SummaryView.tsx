@@ -88,7 +88,8 @@ export function SummaryView({ data }: SummaryProps) {
                   <p className="text-xs text-slate-500">{new Date(item.created_at).toLocaleDateString()}</p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-green-600 text-sm">{formatMoney(item.price)}</span>
+                  {/* AQUÍ ESTABA EL ERROR: Usamos sale_price */}
+                  <span className="font-bold text-green-600 text-sm">{formatMoney(item.sale_price || item.price || 0)}</span>
                   <Link href={`/items/${item.id}`} className="p-1.5 bg-slate-100 rounded text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-colors">
                     <Edit2 size={14} />
                   </Link>

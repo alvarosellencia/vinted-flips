@@ -43,7 +43,8 @@ export default async function LotsPage() {
                       <Calendar size={12} /> {new Date(lot.date || lot.created_at).toLocaleDateString()}
                     </span>
                     <span>•</span>
-                    <span>Coste: {formatMoney(lot.cost || 0)}</span>
+                    {/* AQUÍ ESTABA EL ERROR: Usamos total_cost */}
+                    <span className="font-medium text-slate-700">Coste: {formatMoney(lot.total_cost || 0)}</span>
                   </div>
                 </div>
                 <div className="text-right">
