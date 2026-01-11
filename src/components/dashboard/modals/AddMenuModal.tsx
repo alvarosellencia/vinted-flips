@@ -1,38 +1,32 @@
-'use client'
+import React from 'react';
 
-import { useState } from 'react'
-import { Boxes, Shirt } from 'lucide-react'
-import Modal from './Modal'
-import ItemFormModal from './ItemFormModal'
-import LotFormModal from './LotFormModal'
+interface AddMenuModalProps {
+  // Hacemos isOpen opcional. Si no se pasa, asumimos que el padre controla el renderizado
+  isOpen?: boolean;
+  onClose: () => void;
+}
 
-export default function AddMenuModal({ onClose }: { onClose: () => void }) {
-  const [mode, setMode] = useState<'menu' | 'item' | 'lot'>('menu')
-
-  if (mode === 'item') return <ItemFormModal onClose={onClose} />
-  if (mode === 'lot') return <LotFormModal onClose={onClose} />
+export default function AddMenuModal({ isOpen = true, onClose }: AddMenuModalProps) {
+  // Si isOpen es explícitamente false, no renderizamos.
+  // Si es undefined (no se pasa) o true, renderizamos.
+  if (!isOpen) return null;
 
   return (
-    <Modal onClose={onClose} title="Añadir">
-      <p className="text-sm text-gray-500 mt-1">Crea una prenda o un lote.</p>
-
-      <div className="mt-4 space-y-2">
-        <button
-          onClick={() => setMode('item')}
-          className="w-full rounded-2xl border border-gray-200 py-3 text-sm hover:bg-gray-50 flex items-center justify-center gap-2"
-        >
-          <Shirt className="h-4 w-4" />
-          Añadir prenda
-        </button>
-
-        <button
-          onClick={() => setMode('lot')}
-          className="w-full rounded-2xl border border-gray-200 py-3 text-sm hover:bg-gray-50 flex items-center justify-center gap-2"
-        >
-          <Boxes className="h-4 w-4" />
-          Añadir lote
-        </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md shadow-xl border border-slate-200">
+        <h2 className="text-xl font-bold mb-4 text-slate-900">Añadir Nuevo</h2>
+        <p className="text-slate-500 mb-6 text-sm">
+          Los formularios de creación están en mantenimiento (Fase 1: Estabilización).
+        </p>
+        <div className="flex justify-end pt-2">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 bg-slate-100 text-slate-700 font-medium rounded-md hover:bg-slate-200 transition-colors"
+          >
+            Cerrar
+          </button>
+        </div>
       </div>
-    </Modal>
-  )
+    </div>
+  );
 }

@@ -1,16 +1,14 @@
-import ExportPage from '@/components/dashboard/ExportPage'
-import { PageHeader, PageSection, PageShell } from '@/components/ui/PageShell'
-import PageActions from '@/components/layout/PageActions'
+import { PageShell } from '@/components/ui/PageShell';
+import { Card } from '@/components/ui/Card';
 
-export default function Page() {
+export default function ExportPage() {
   return (
-    <PageShell>
-      <PageHeader title="Export" description="Descarga tus datos en CSV." />
-      <PageActions />
-
-      <PageSection>
-        <ExportPage />
-      </PageSection>
+    <PageShell title="Exportar Datos">
+      <Card>
+        <div className="p-4 text-center text-slate-500">
+          Funcionalidad de exportación pendiente.
+        </div>
+      </Card>
     </PageShell>
-  )
+  );
 }
