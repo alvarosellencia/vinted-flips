@@ -19,18 +19,20 @@ export default async function HomePage() {
   // 2. CÁLCULO DE FINANZAS (Lógica de Negocio Real)
   
   // A. INGRESOS (Solo lo que realmente se ha vendido)
-  // Asumimos que la columna de precio de venta es 'price'
+  // Asumimos que la columna de precio de venta es 'sale_price' o 'price' (usamos sale_price según CSV)
   const soldItems = items.filter(i => i.status === 'sold');
-  const totalRevenue = soldItems.reduce((acc, item) => acc + (Number(item.price) || 0), 0);
+  // Nota: Tu CSV tiene 'sale_price', pero a veces en código usamos 'price'. 
+  // Aquí intentamos leer sale_price, y si no existe, price.
+  const totalRevenue = soldItems.reduce((acc, item) => acc + (Number(item.sale_price) || Number(item.price) || 0), 0);
 
   // B. GASTOS (Coste Lotes + Coste Items Sueltos)
-  const totalLotCost = lots.reduce((acc, lot) => acc + (Number(lot.cost) || 0), 0); 
+  // Corrección: Usamos 'total_cost' para lotes según tu CSV
+  const totalLotCost = lots.reduce((acc, lot) => acc + (Number(lot.total_cost) || 0), 0); 
   
-  // Items sueltos son los que NO tienen lot_id (null)
-  // IMPORTANTE: Asumo que la columna de coste de compra del item es 'purchase_price'.
-  // Si en tu DB se llama 'cost', cambia 'item.purchase_price' por 'item.cost' abajo.
+  // Items sueltos son los que NO tienen lot_id
+  // Corrección CRÍTICA: Usamos 'purchase_cost' según tu CSV
   const looseItems = items.filter(i => !i.lot_id); 
-  const totalLooseItemCost = looseItems.reduce((acc, item) => acc + (Number(item.purchase_price) || 0), 0);
+  const totalLooseItemCost = looseItems.reduce((acc, item) => acc + (Number(item.purchase_cost) || 0), 0);
 
   const totalInvestment = totalLotCost + totalLooseItemCost;
   const netProfit = totalRevenue - totalInvestment;
@@ -48,9 +50,13 @@ export default async function HomePage() {
 
   // Rellenar con ventas reales
   soldItems.forEach(item => {
-    const date = new Date(item.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+    // Usamos sale_date si existe, si no created_at
+    const dateRef = item.sale_date || item.created_at;
+    const date = new Date(dateRef).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' });
+    
     if (chartDataMap.has(date)) {
-      chartDataMap.set(date, chartDataMap.get(date) + (Number(item.price) || 0));
+      const amount = Number(item.sale_price) || Number(item.price) || 0;
+      chartDataMap.set(date, chartDataMap.get(date) + amount);
     }
   });
 

@@ -18,45 +18,49 @@ export default async function EditItemPage({ params }: { params: Promise<{ id: s
     'use server';
     const supabase = await createClient();
     
+    // Recogemos los nombres exactos de las columnas
     const title = formData.get('title') as string;
-    const price = Number(formData.get('price'));
-    const purchase_price = Number(formData.get('purchase_price'));
+    // Intentamos leer sale_price del form, si no está usamos price
+    const sale_price = Number(formData.get('sale_price'));
+    const purchase_cost = Number(formData.get('purchase_cost'));
     const status = formData.get('status') as string;
 
     await supabase.from('items').update({ 
-      title, 
-      price,
-      purchase_price, // Asegúrate de que esta columna existe en tu DB
-      status
+      title: title || item.title, // fallback al original si viene vacío
+      sale_price: sale_price,
+      purchase_cost: purchase_cost,
+      status: status
     }).eq('id', id);
 
     redirect('/');
   }
 
   return (
-    <PageShell title={`Editar: ${item.title}`}>
+    <PageShell title={`Editar: ${item.title || item.name}`}>
       <Card className="max-w-xl mx-auto">
         <form action={updateItem} className="space-y-4">
           <Input 
             name="title" 
             label="Título" 
-            defaultValue={item.title} 
+            defaultValue={item.title || item.name} 
           />
           
           <div className="grid grid-cols-2 gap-4">
+            {/* CORRECCIÓN: name="purchase_cost" para coincidir con DB */}
             <Input 
-              name="purchase_price" 
+              name="purchase_cost" 
               label="Coste (Compra)" 
               type="number" 
               step="0.01" 
-              defaultValue={item.purchase_price || 0} 
+              defaultValue={item.purchase_cost || 0} 
             />
+            {/* CORRECCIÓN: name="sale_price" para coincidir con DB */}
             <Input 
-              name="price" 
+              name="sale_price" 
               label="Precio (Venta)" 
               type="number" 
               step="0.01" 
-              defaultValue={item.price} 
+              defaultValue={item.sale_price || 0} 
             />
           </div>
 
