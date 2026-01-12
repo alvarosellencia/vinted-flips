@@ -1,14 +1,16 @@
 import { createClient } from '@/lib/supabase/server';
 import { PageShell } from '@/components/ui/PageShell';
 import { Card } from '@/components/ui/Card';
-import { Layers, Box, Calendar } from 'lucide-react';
+import { Layers, Box, Calendar, Plus, TrendingUp, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
 
 export default async function LotsPage() {
   const supabase = await createClient();
 
-  const { data: lots, error } = await supabase
+  // Traemos los lotes Y sus items para calcular beneficios
+  const { data: lots } = await supabase
     .from('lots')
-    .select('*')
+    .select('*, items(*)') // Relación para sumar ventas
     .order('created_at', { ascending: false });
 
   const formatMoney = (amount: number) => 
@@ -16,47 +18,77 @@ export default async function LotsPage() {
 
   return (
     <PageShell title="Gestión de Lotes">
-      {(!lots || lots.length === 0) ? (
-        <Card className="p-12 flex flex-col items-center justify-center text-center space-y-4">
-          <div className="bg-slate-100 p-4 rounded-full">
-            <Layers size={48} className="text-slate-400" />
-          </div>
-          <h3 className="text-lg font-medium text-slate-900">No tienes lotes registrados</h3>
-          <p className="text-slate-500">
-            Los lotes agrupan varios items para controlar costes de compra masiva.
-          </p>
-        </Card>
-      ) : (
-        <div className="space-y-4">
-          {lots.map((lot: any) => (
-            <Card key={lot.id} className="hover:border-indigo-200 transition-colors">
-              <div className="flex items-center gap-4">
-                <div className="h-12 w-12 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-600 shrink-0">
-                  <Box size={24} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-semibold text-slate-900 truncate">
-                    {lot.name || lot.description || 'Lote sin nombre'}
-                  </h4>
-                  <div className="text-xs text-slate-500 flex items-center gap-3 mt-1">
-                    <span className="flex items-center gap-1">
-                      <Calendar size={12} /> {new Date(lot.date || lot.created_at).toLocaleDateString()}
-                    </span>
-                    <span>•</span>
-                    {/* AQUÍ ESTABA EL ERROR: Usamos total_cost */}
-                    <span className="font-medium text-slate-700">Coste: {formatMoney(lot.total_cost || 0)}</span>
+      <div className="flex justify-end mb-6">
+        <Link href="/lots/new" className="bg-indigo-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-indigo-700">
+          <Plus size={18} /> Nuevo Lote
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 gap-6">
+        {lots?.map((lot: any) => {
+          // 1. CÁLCULOS DEL LOTE
+          const totalCost = Number(lot.total_cost) || 0;
+          const itemsCount = Number(lot.items_count) || 1;
+          const unitCost = totalCost / itemsCount;
+          
+          // Sumar ventas REALES de items pertenecientes a este lote
+          const lotRevenue = lot.items
+            .filter((i: any) => i.status?.toLowerCase() === 'sold')
+            .reduce((acc: number, i: any) => acc + (Number(i.sale_price) || Number(i.price) || 0), 0);
+
+          const profit = lotRevenue - totalCost;
+          const isProfitable = profit > 0;
+          const progressPercent = Math.min((lotRevenue / totalCost) * 100, 100);
+
+          return (
+            <Card key={lot.id} className="relative overflow-hidden">
+              <div className="flex flex-col md:flex-row gap-6">
+                
+                {/* ICONO Y DATOS BÁSICOS */}
+                <div className="flex items-start gap-4 md:w-1/3">
+                  <div className={`h-12 w-12 rounded-lg flex items-center justify-center shrink-0 ${isProfitable ? 'bg-green-100 text-green-600' : 'bg-orange-100 text-orange-600'}`}>
+                    {isProfitable ? <TrendingUp size={24} /> : <Box size={24} />}
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-lg text-slate-900">{lot.name}</h3>
+                    <div className="text-sm text-slate-500 space-y-1 mt-1">
+                      <p className="flex items-center gap-2"><Calendar size={14}/> {new Date(lot.created_at).toLocaleDateString()}</p>
+                      <p>Items: <span className="font-medium text-slate-900">{lot.items.length} / {itemsCount}</span> registrados</p>
+                      <p>Coste Unitario: <span className="font-medium text-slate-900">{formatMoney(unitCost)}</span></p>
+                    </div>
                   </div>
                 </div>
-                <div className="text-right">
-                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-800">
-                    Activo
-                  </span>
+
+                {/* BARRA DE PROGRESO Y FINANZAS */}
+                <div className="flex-1 space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-slate-500">Recuperado: <strong>{formatMoney(lotRevenue)}</strong></span>
+                    <span className="text-slate-500">Objetivo: <strong>{formatMoney(totalCost)}</strong></span>
+                  </div>
+                  
+                  {/* Barra visual */}
+                  <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-500 ${isProfitable ? 'bg-green-500' : 'bg-orange-500'}`}
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2">
+                    <div className={`text-sm font-bold ${isProfitable ? 'text-green-600' : 'text-red-500'}`}>
+                      {isProfitable ? '+' : ''}{formatMoney(profit)} Beneficio
+                    </div>
+                    <Link href={`/lots/${lot.id}`} className="text-sm text-indigo-600 hover:underline">
+                      Ver detalles &rarr;
+                    </Link>
+                  </div>
                 </div>
+
               </div>
             </Card>
-          ))}
-        </div>
-      )}
+          );
+        })}
+      </div>
     </PageShell>
   );
 }
