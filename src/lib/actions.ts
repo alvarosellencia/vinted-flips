@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
-// --- ACCIÓN: CREAR LOTE ---
+// --- 1. ACCIÓN: CREAR LOTE ---
 export async function createLot(formData: FormData) {
   const supabase = await createClient();
   
@@ -14,7 +14,6 @@ export async function createLot(formData: FormData) {
   const date = formData.get('date') as string;
 
   // Calculamos el coste unitario automáticamente
-  // Evitamos dividir por cero
   const unit_cost = items_count > 0 ? (total_cost / items_count) : 0;
 
   const { error } = await supabase.from('lots').insert({
@@ -27,14 +26,13 @@ export async function createLot(formData: FormData) {
 
   if (error) {
     console.error('Error creando lote:', error);
-    // Podríamos devolver el error, pero por ahora redirigimos
   }
 
-  revalidatePath('/lots'); // Refrescar la lista de lotes
-  redirect('/lots');       // Volver a la página de lotes
+  revalidatePath('/lots');
+  redirect('/lots');
 }
 
-// --- ACCIÓN: CREAR ITEM ---
+// --- 2. ACCIÓN: CREAR ITEM ---
 export async function createItem(formData: FormData) {
   const supabase = await createClient();
   
@@ -45,15 +43,16 @@ export async function createItem(formData: FormData) {
   const purchase_cost = Number(formData.get('purchase_cost'));
   const sale_price = Number(formData.get('sale_price'));
   
-  // Lógica: Si seleccionó "Ninguno" (value="none"), enviamos null a la BD
+  // Si seleccionó "Ninguno", enviamos null
   const finalLotId = lot_id === 'none' ? null : lot_id;
 
   const { error } = await supabase.from('items').insert({
     title,
     status: status || 'for_sale',
     lot_id: finalLotId,
-    purchase_cost: purchase_cost || 0, // Si es de lote, esto se ignora visualmente luego
-    sale_price: sale_price || 0
+    purchase_cost: purchase_cost || 0,
+    sale_price: sale_price || 0,
+    created_at: new Date().toISOString()
   });
 
   if (error) {
@@ -63,4 +62,21 @@ export async function createItem(formData: FormData) {
   revalidatePath('/items');
   revalidatePath('/'); // Actualizar dashboard
   redirect('/items');
+}
+
+// --- 3. ACCIÓN: ACTUALIZAR ESTADO (La que faltaba) ---
+export async function updateItemStatus(id: string, newStatus: string) {
+  const supabase = await createClient();
+  
+  const updates: any = { status: newStatus };
+  
+  // Si se vende, marcamos fecha de venta automática
+  if (newStatus === 'sold') {
+    updates.sale_date = new Date().toISOString();
+  }
+
+  await supabase.from('items').update(updates).eq('id', id);
+  
+  revalidatePath('/items');
+  revalidatePath('/');
 }
